@@ -11,14 +11,7 @@ S = Solver(beta = beta,
             n_tau = 100001)
 
 # --------- Initialize G0_iw ----------
-
-# FIXME Set tails explicitly
-S.G0_iw['up'] << inverse(iOmega_n + mu + h)
-S.G0_iw['dn'] << inverse(iOmega_n + mu - h)
-
-for iw in Delta['up'].mesh:
-    S.G0_iw['up'][iw] = 1.0 / (iw + mu + h - Delta['up'][iw])
-    S.G0_iw['dn'][iw] = 1.0 / (iw + mu - h - Delta['dn'][iw])
+S.G0_iw = G0_iw
 
 # --------- Solve! ----------
 S.solve(h_int=h_int,

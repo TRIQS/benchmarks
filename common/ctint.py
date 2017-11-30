@@ -11,20 +11,13 @@ S = SolverCore(beta = beta,
                n_tau = 100001)
 
 # --------- Initialize G0_iw ----------
-
-# FIXME Set tails explicitly
-S.G0_iw['up'] << inverse(iOmega_n + mu + h)
-S.G0_iw['dn'] << inverse(iOmega_n + mu - h)
-
-for iw in Delta['up'].mesh:
-    S.G0_iw['up'][iw] = 1.0 / (iw + mu + h - Delta['up'][iw])
-    S.G0_iw['dn'][iw] = 1.0 / (iw + mu - h - Delta['dn'][iw])
+S.G0_iw = G0_iw
 
 # --------- The alpha tensor ----------
 delta = 0.1
 diag = 0.5 + delta
 odiag = 0.5 - delta
-alpha = [ [[diag,odiag]], [[odiag,diag]] ]
+alpha = [ [[diag,odiag] for i in indices ] for bl, indices in gf_struct ]
 
 # --------- Solve! ----------
 S.solve(h_int=h_int,
