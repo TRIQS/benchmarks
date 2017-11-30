@@ -11,7 +11,7 @@ S = SolverCore(beta = beta,
                n_tau = 100001)
 
 # --------- Initialize G0_iw ----------
-S.G0_iw = G0_iw
+S.G0_iw << G0_iw
 
 # --------- The alpha tensor ----------
 delta = 0.1
