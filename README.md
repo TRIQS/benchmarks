@@ -7,6 +7,8 @@ and for the comparison of different results.
 
 Each directory fully defines one specific impurity model and contains the following:
 
-* **README.rst** - A description of the impurity model
-* **system.py** - Define the local Hamiltonian and the hybridization function of the impurity model
-* **scripts** - Contains one script for each impurity solver (e.g. CTHYB.py)
+* **notebook.ipynb** - IPython Notebook with a description of the impurity model and analysis of results.
+* **system.py** - Defines the local Hamiltonian and the hybridization function of the impurity model.
+* **scripts** - Contains one script for each impurity solver (e.g. cthyb.py).
+* **results** - Contains one hdf5 archive for each impurity solver (e.g. cthyb.h5).
+		They consist of the results for the Green function and additional solver information.
