@@ -7,7 +7,7 @@ from itertools import product
 from numpy import matrix, array
 
 # ==== System Parameters ====
-beta = 10.          # Inverse temperature
+beta = 5.           # Inverse temperature
 mu = 0.25           # Chemical potential
 U = 1.              # Density-density interaction for opposite spins
 Up = 0.3            # Density-density interaction for equal spins
