@@ -9,8 +9,7 @@ ed = TriqsExactDiagonalization(h_imp, fundamental_operators, beta)
 
 # --------- Calculate the single-particle Green function ----------
 G_iw = Gf_from_struct(mesh=iw_mesh, struct=gf_struct)
-G_iw['up'] << inverse(iOmega_n + mu + h)
-G_iw['dn'] << inverse(iOmega_n + mu - h)
+G_iw << inverse(iOmega_n)
 
 for bl, idx_lst in gf_struct:
     for i, j in product(idx_lst, idx_lst):

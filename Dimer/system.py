@@ -46,7 +46,7 @@ gf_struct = [ ['up',[0,1]], ['dn',[0,1]] ]
 n_iw = 10
 iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
 Delta = Gf_from_struct(mesh=iw_mesh, struct=gf_struct)
-Delta << inverse(iOmega_n - epsilon)
+Delta << inverse(iOmega_n - epsilon);
 
 # ==== Non-Interacting Impurity Green function  ====
 G0_iw = Gf_from_struct(mesh=iw_mesh, struct=gf_struct)
