@@ -1,4 +1,4 @@
-execfile('../system.py')
+execfile('../model.py')
 
 from pytriqs.archive import HDFArchive
 from pytriqs.utility import mpi
