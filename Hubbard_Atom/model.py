@@ -1,4 +1,6 @@
-execfile('../common/util.py')
+import sys, os
+sys.path.append(os.getcwd() + '/../common')
+from util import *
 
 from pytriqs.gf import Gf, MeshImFreq, iOmega_n, inverse
 from pytriqs.operators import c, c_dag, n

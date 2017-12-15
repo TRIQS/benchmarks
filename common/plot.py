@@ -1,4 +1,6 @@
-execfile('model.py')
+import sys, os
+sys.path.append(os.getcwd() + "/..")
+from model import *
 
 from pytriqs.archive import HDFArchive
 from pytriqs.plot.mpl_interface import oplot, plt
