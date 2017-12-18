@@ -26,7 +26,12 @@ solve_params = {
         'h_int' : h_int,
         'n_warmup_cycles' : 10000,
         'n_cycles' : 1000000,
-        'length_cycle' : 100
+        'length_cycle' : 100,
+        'measure_M3pp_tau' : True,
+        'measure_M3ph_tau' : True,
+        'n_iw_M3' : n_iw,
+        'n_iW_M3' : n_iw,
+        'n_tau_M3' : 10*n_iw+1 # Careful -> Discretization error
         }
 
 start = time.time()
@@ -37,6 +42,8 @@ end = time.time()
 if mpi.is_master_node():
     with HDFArchive("../results/ctint.h5",'w') as results:
         results["G"] = S.G_iw
+        results["chi3pp_iw"] = S.chi3pp_iw
+        results["chi3ph_iw"] = S.chi3ph_iw
 
         import inspect
         import __main__

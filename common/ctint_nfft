@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+
+import sys, os, time
+sys.path.append(os.getcwd() + "/..")
+sys.path.append(os.getcwd() + "/../../common")
+from model import *
+
+from h5 import HDFArchive
+from triqs.utility import mpi
+from triqs_ctint import Solver, version
+
+# --------- Construct the CTINT solver ----------
+constr_params = {
+        'beta' : beta,
+        'gf_struct' : gf_struct,
+        'n_iw' : n_iw,
+        'n_tau' : 10001
+        }
+S = Solver(**constr_params)
+
+# --------- Initialize G0_iw ----------
+S.G0_iw << G0_iw
+
+# --------- Solve! ----------
+solve_params = {
+        'h_int' : h_int,
+        'n_warmup_cycles' : 10000,
+        'n_cycles' : 1000000,
+        'length_cycle' : 100,
+        'measure_M3pp_iw' : True,
+        'measure_M3ph_iw' : True,
+        'n_iw_M3' : n_iw,
+        'n_iW_M3' : n_iw,
+        'n_tau_M3' : 10*n_iw+1 # Careful -> Discretization error
+        }
+start = time.time()
+S.solve(**solve_params)
+end = time.time()
+
+# -------- Save in archive ---------
+if mpi.is_master_node():
+    with HDFArchive("../results/ctint_nfft.h5",'w') as results:
+        results["G"] = S.G_iw
+
+        results["chi3pp_iw"] = S.chi3pp_iw_nfft
+        results["chi3ph_iw"] = S.chi3ph_iw_nfft
+
+        import inspect
+        import __main__
+        results.create_group("Solver_Info")
+        info_grp = results["Solver_Info"]
+        info_grp["solver_name"] = "triqs_ctint"
+        info_grp["constr_params"] = constr_params
+        info_grp["solve_params"] = solve_params
+        info_grp["solver"] = S
+        info_grp["solver_version"] = version.version
+        info_grp["solver_git_hash"] = version.triqs_ctint_hash
+        info_grp["triqs_git_hash"] = version.triqs_hash
+        info_grp["script"] = inspect.getsource(__main__)
+        info_grp["num_threads"] = mpi.size
+        info_grp["run_time"] = end - start
