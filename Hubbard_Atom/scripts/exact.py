@@ -9,7 +9,7 @@ from math import exp
 Z = 1. + exp((mu+h)*beta) + exp((mu-h)*beta) + exp((2.*mu-U)*beta)
 n = {}
 
-G_iw = Gf_from_struct(mesh=iw_mesh, struct=gf_struct)
+G_iw = BlockGf_from_struct(mesh=iw_mesh, struct=gf_struct)
 
 n['up'] = ( exp((mu+h)*beta) + exp((2.*mu-U)*beta) ) / Z
 n['dn'] = ( exp((mu-h)*beta) + exp((2.*mu-U)*beta) ) / Z

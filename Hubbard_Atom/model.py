@@ -30,12 +30,13 @@ gf_struct = [ ['up',[0]], ['dn',[0]] ]
 # ==== Hybridization Function ====
 n_iw = 20
 iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
-Delta = Gf_from_struct(mesh=iw_mesh, struct=gf_struct)
+Delta = BlockGf_from_struct(mesh=iw_mesh, struct=gf_struct)
 Delta << 0.0; 
 
 # ==== Non-Interacting Impurity Green function  ====
-G0_iw = Gf_from_struct(mesh=iw_mesh, struct=gf_struct)
-G0_iw << inverse(iOmega_n) # FIXME Set tails explicitly
+G0_iw = BlockGf_from_struct(mesh=iw_mesh, struct=gf_struct)
+G0_iw['up'] << inverse(iOmega_n + mu + h) # FIXME Set tails explicitly
+G0_iw['dn'] << inverse(iOmega_n + mu - h) # FIXME Set tails explicitly
 
 for iw in iw_mesh:
     G0_iw['up'][iw] = 1.0 / (iw + mu + h - Delta['up'][iw])

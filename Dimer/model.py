@@ -47,10 +47,10 @@ gf_struct = [ ['up',[0,1]], ['dn',[0,1]] ]
 # ==== Hybridization Function ====
 n_iw = 10
 iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
-Delta = Gf_from_struct(mesh=iw_mesh, struct=gf_struct)
+Delta = BlockGf_from_struct(mesh=iw_mesh, struct=gf_struct)
 Delta << inverse(iOmega_n - epsilon);
 
 # ==== Non-Interacting Impurity Green function  ====
-G0_iw = Gf_from_struct(mesh=iw_mesh, struct=gf_struct)
+G0_iw = BlockGf_from_struct(mesh=iw_mesh, struct=gf_struct)
 G0_iw['up'] << inverse(iOmega_n + mu - t * matrix([[0,1],[1,0]]) - Delta['up']) # FIXME Should work for BlockGf
 G0_iw['dn'] << inverse(iOmega_n + mu - t * matrix([[0,1],[1,0]]) - Delta['dn'])

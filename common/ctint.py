@@ -20,7 +20,11 @@ S.G0_iw << G0_iw
 
 # --------- The alpha tensor ----------
 delta = 0.1
-alpha = [ [[0.5 + delta, 0.5 - delta] for i in indices ] for bl, indices in gf_struct ]
+
+# Assuming 'up', 'dn' block structure
+assert(len(gf_struct) == 2)
+indices = gf_struct[0][1]
+alpha = [ [[0.5 + delta, 0.5 - delta] for i in indices ], [[0.5 - delta, 0.5 + delta] for i in indices ] ]
 
 # --------- Solve! ----------
 solve_params = {

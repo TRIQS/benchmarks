@@ -1,6 +1,6 @@
 from pytriqs.gf import *
 
-def Gf_from_struct(mesh, struct):
+def BlockGf_from_struct(mesh, struct):
     # Without block structure
     if not isinstance(struct[0], list):
         return Gf(mesh=mesh, indices=struct)

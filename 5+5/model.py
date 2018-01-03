@@ -60,14 +60,12 @@ gf_struct = [['up', orb_names ], ['dn', orb_names ] ]
 # ==== Hybridization Function & Non-Interacting Impurity Green function====
 n_iw = 10
 iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
-Delta = Gf_from_struct(mesh=iw_mesh, struct=gf_struct)
-G0_iw = Gf_from_struct(mesh=iw_mesh, struct=gf_struct)
-
-G0_iw << inverse(iOmega_n)
+Delta = BlockGf_from_struct(mesh=iw_mesh, struct=gf_struct)
+G0_iw = BlockGf_from_struct(mesh=iw_mesh, struct=gf_struct)
 
 for spin, orbital in product(['up','dn'],orb_names):
     V = delta_params[orbital]['V']
     e = delta_params[orbital]['e']
 
     Delta[spin][orbital,orbital] << (V**2) * inverse(iOmega_n - e)
-    G0_iw[spin][orbital,orbital] << inverse(iOmega_n +mu - atomic_levels[(spin,orbital)] - Delta[spin][orbital,orbital])
+    G0_iw[spin][orbital,orbital] << inverse(iOmega_n + mu - atomic_levels[(spin,orbital)] - Delta[spin][orbital,orbital])
