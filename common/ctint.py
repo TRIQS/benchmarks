@@ -8,11 +8,11 @@ from pytriqs.utility import mpi
 from triqs_ctint import SolverCore, version
 
 # --------- Construct the CTINT solver ----------
-constr_params = {   
+constr_params = {
         'beta' : beta,
         'gf_struct' : dict(gf_struct),
-        'n_iw' : n_iw,  
-        'n_tau' : 100001 
+        'n_iw' : n_iw,
+        'n_tau' : 100001
         }
 S = SolverCore(**constr_params)
 
