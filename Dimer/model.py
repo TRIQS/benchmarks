@@ -6,23 +6,43 @@ from pytriqs.gf import Gf, MeshImFreq, iOmega_n, inverse
 from pytriqs.operators import c, c_dag, n
 from pytriqs.operators.util.hamiltonians import h_int_kanamori
 from itertools import product
-from numpy import matrix, array
+from numpy import matrix, array, diag
 
 # ==== System Parameters ====
-beta = 5.           # Inverse temperature
-mu = 0.25           # Chemical potential
-U = 1.              # Density-density interaction for opposite spins
-Up = 0.3            # Density-density interaction for equal spins
-J = 0.5             # Hunds coupling
-t = 1.              # Hopping between impurity sites
-epsilon = matrix([[0.2,0.1],[0.1,0.2]]) # Bath state energy
+beta = 5.                       # Inverse temperature
+mu = 0.25                       # Chemical potential
+eps = array([0.0, 0.1])         # Impurity site energies
+t = 1.                          # Hopping between impurity sites
+
+eps_bath = array([0.2, 0.15])   # Bath site energies
+t_bath = 0.1                    # Hopping between bath sites
+
+U = 1.                          # Density-density interaction for opposite spins
+Up = 0.3                        # Density-density interaction for equal spins
+J = 0.5                         # Hunds coupling
+
+spin_names = ['up', 'dn']
+orb_names  = [0, 1]
+
+# Non-interacting impurity hamiltonian in matrix representation
+h_0_mat = diag(eps - mu) - matrix([[0, t],
+                                   [t, 0]])
+
+# Bath hamiltonian in matrix representation
+h_bath_mat = diag(eps_bath) - matrix([[0, t_bath],
+                                      [t_bath, 0]])
+
+# Coupling matrix
+V_mat = matrix([[1., 0.],
+                [0., 1.]])
 
 # ==== Local Hamiltonian ====
-h_0 = - mu*( n('up',0) + n('dn',0) + n('up',1) + n('dn',1) ) \
-      + t* ( c_dag('up',0) * c('up',1) + c_dag('up',1) * c('up',0) + \
-             c_dag('dn',0) * c('dn',1) + c_dag('dn',1) * c('dn',0) )
+c_dag_vec = { s: matrix([[c_dag(s,o) for o in orb_names]]) for s in spin_names }
+c_vec =     { s: matrix([[c(s,o)] for o in orb_names]) for s in spin_names }
 
-h_int = h_int_kanamori(['up','dn'],[0,1],
+h_0 = sum(c_dag_vec[s] * h_0_mat * c_vec[s] for s in spin_names)[0,0]
+
+h_int = h_int_kanamori(spin_names, orb_names,
                         array([[0,Up-3*J],[Up-3*J,0]]), # Interaction for equal spins
                         array([[U,U-2*J],[U-2*J,U]]),   # Interaction for opposite spins
                         J,True)
@@ -30,27 +50,26 @@ h_int = h_int_kanamori(['up','dn'],[0,1],
 h_loc = h_0 + h_int
 
 # ==== Bath & Coupling hamiltonian ====
-h_bath, h_coup = 0, 0
-for sig in ['up','dn']:
-    h_coup += c_dag(sig,0) * c(sig,2) + c_dag(sig,2) * c(sig,0)
-    h_coup += c_dag(sig,1) * c(sig,3) + c_dag(sig,3) * c(sig,1)
-    h_bath += epsilon[0,0] * n(sig,2) + epsilon[1,1] * n(sig,3)
-    h_bath += epsilon[0,1] * c_dag(sig,2) * c(sig,3) + epsilon[1,0] * c_dag(sig,3) * c(sig,2)
+orb_bath_names = ['b_' + str(o) for o in orb_names]
+c_dag_bath_vec = { s: matrix([[c_dag(s, o) for o in orb_bath_names]]) for s in spin_names }
+c_bath_vec =     { s: matrix([[c(s, o)] for o in orb_bath_names]) for s in spin_names }
 
-# ==== Total impurity hamiltonian and fundamental operators ====
+h_bath = sum(c_dag_bath_vec[s] * h_bath_mat * c_bath_vec[s] for s in spin_names)[0,0]
+h_coup = sum(c_dag_vec[s] * V_mat * c_bath_vec[s] + c_dag_bath_vec[s] * V_mat * c_vec[s] for s in spin_names)[0,0] # FIXME Adjoint
+
+# ==== Total impurity hamiltonian ====
 h_imp = h_loc + h_coup + h_bath
-fundamental_operators = [ c(spin,i) for spin, i in product(['up','dn'],range(4)) ]
 
 # ==== Green function structure ====
-gf_struct = [ ['up',[0,1]], ['dn',[0,1]] ]
+gf_struct = [ [s, orb_names] for s in spin_names ]
 
 # ==== Hybridization Function ====
 n_iw = 10
 iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
 Delta = BlockGf_from_struct(mesh=iw_mesh, struct=gf_struct)
-Delta << inverse(iOmega_n - epsilon);
+Delta << inverse(iOmega_n - V_mat * h_bath_mat * V_mat);
 
 # ==== Non-Interacting Impurity Green function  ====
-G0_iw = BlockGf_from_struct(mesh=iw_mesh, struct=gf_struct)
-G0_iw['up'] << inverse(iOmega_n + mu - t * matrix([[0,1],[1,0]]) - Delta['up']) # FIXME Should work for BlockGf
-G0_iw['dn'] << inverse(iOmega_n + mu - t * matrix([[0,1],[1,0]]) - Delta['dn'])
+G0_iw = Delta.copy()
+G0_iw['up'] << inverse(iOmega_n - h_0_mat - Delta['up']) # FIXME Should work for BlockGf
+G0_iw['dn'] << inverse(iOmega_n - h_0_mat - Delta['dn'])
