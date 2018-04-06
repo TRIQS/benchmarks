@@ -32,7 +32,7 @@ solve_params = {
         'h_int' : h_int,
         'n_warmup_cycles' : 1000,
         'n_cycles' : 10000000,
-        'length_cycle' : 200,
+        'length_cycle' : 100,
         'alpha' : alpha,
         'measure_M_tau' : True,
         'post_process' : True

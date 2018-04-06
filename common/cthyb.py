@@ -5,7 +5,7 @@ from model import *
 
 from pytriqs.archive import HDFArchive
 from pytriqs.utility import mpi
-from pytriqs.cthyb import Solver, version
+from triqs_cthyb import Solver, version
 
 # --------- Construct the CTHYB solver ----------
 constr_params = {
@@ -23,8 +23,8 @@ S.G0_iw << G0_iw
 solve_params = {
         'h_int' : h_int,
         'n_warmup_cycles' : 1000,
-        'n_cycles' : 10000000,
-        'length_cycle' : 200
+        'n_cycles' : 1000000,
+        'length_cycle' : 100,
         }
 S.solve(**solve_params)
 

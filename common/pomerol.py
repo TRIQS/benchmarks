@@ -9,13 +9,18 @@ from pytriqs.utility import mpi
 from pomerol2triqs import PomerolED
 
 # --------- Construct the ED solver ----------
+get_idx_tpl = lambda x: tuple(next(iter(x))[0][0][1])
+op_indices = map(get_idx_tpl, util.get_fundamental_operators(h_imp))
+
 index_converter = {}
-# Local degrees of freedom
-index_converter.update({(spin, orb) : ("loc", orb, "down" if spin == "dn" else "up") 
-    for spin, orb in product(spin_names,orb_names)})
-# Bath degrees of freedom
-index_converter.update({(spin, 'b_' + str(orb)) : ("bath", orb, "down" if spin == "dn" else "up")
-    for spin, orb in product(spin_names,orb_names)})
+
+for spin, orb in op_indices:
+    # Bath degrees of freedom
+    if isinstance(orb, str) and 'b_' in orb:
+        index_converter[(spin, orb)] = ("bath", int(orb.split('_')[1]), "up" if spin == "up" else "down")
+    # Local degrees of freedom
+    else:
+        index_converter[(spin, orb)] = ("loc", orb, "up" if spin == "up" else "down")
 
 ed = PomerolED(index_converter, verbose = True)
 

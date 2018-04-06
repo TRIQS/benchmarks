@@ -2,12 +2,14 @@ import sys, os
 sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
 from model import *
+import util
 
 from pytriqs.archive import HDFArchive
 from pytriqs.utility import mpi
 from pyed.TriqsExactDiagonalization import TriqsExactDiagonalization
 
 # --------- Construct the ED solver ----------
+fundamental_operators = util.get_fundamental_operators(h_imp)
 ed = TriqsExactDiagonalization(h_imp, fundamental_operators, beta)
 
 # --------- Calculate the single-particle Green function ----------
