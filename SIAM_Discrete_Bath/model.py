@@ -14,6 +14,9 @@ h = 0.2             # Local magnetic field
 E = [ 0.0, 4.0 ]    # Bath-site energies
 V = [ 2.0, 5.0 ]    # Couplings to Bath-sites
 
+spin_names = ['up', 'dn']
+orb_names  = [0]
+
 # ==== Local Hamiltonian ====
 h_0 = - mu*( n('up',0) + n('dn',0) ) - h*( n('up',0) - n('dn',0) )
 h_int = U * n('up',0) * n('dn',0)
@@ -21,17 +24,16 @@ h_loc = h_0 + h_int
 
 # ==== Bath & Coupling Hamiltonian ====
 h_bath, h_coup = 0, 0
-for i, E_i, V_i in zip([1, 2], E, V):
+for i, E_i, V_i in zip([0, 1], E, V):
     for sig in ['up','dn']:
-        h_bath += E_i * n(sig,i)
-        h_coup += V_i * (c_dag(sig,0) * c(sig,i) + c_dag(sig,i) * c(sig,0))
+        h_bath += E_i * n(sig,'b_' + str(i))
+        h_coup += V_i * (c_dag(sig,0) * c(sig,'b_' + str(i)) + c_dag(sig,'b_' + str(i)) * c(sig,0))
 
 # ==== Total impurity hamiltonian and fundamental operators ====
 h_imp = h_loc + h_coup + h_bath
-fundamental_operators = [ c('up',0), c('dn',0), c('up',1), c('dn',1), c('up',2), c('dn',2) ] # FIXME To be extracted
 
 # ==== Green function structure ====
-gf_struct = [ ['up',[0]], ['dn',[0]] ]
+gf_struct = [ [s, orb_names] for s in spin_names ]
 
 # ==== Hybridization Function ====
 n_iw = 20
