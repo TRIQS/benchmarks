@@ -32,7 +32,7 @@ for g, name in [[G, 'G'], [Sigma, '$\Sigma$']]:
         fig = plt.subplot(n_blocks,1,i)
         fig.set_title(name + "[" + block + "]")
         for solver in solver_lst:
-            oplot(g[solver][block], name = name + "_%s" % solver)
+            oplot(g[solver][block][0,0], name = name + "[0,0]_%s" % solver)
         plt.xlabel("$\omega_n$")
         plt.ylabel(name + "[" + block + "]$(i\omega_n)$")
 
