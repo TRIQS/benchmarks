@@ -20,7 +20,7 @@ S = SolverCore(**constr_params)
 S.G0_iw << G0_iw
 
 # --------- The alpha tensor ----------
-delta = 0.1
+delta = 0.2
 
 # Assuming 'up', 'dn' block structure
 assert(len(gf_struct) == 2)
@@ -55,3 +55,4 @@ if mpi.is_master_node():
         info_grp["script"] = inspect.getsource(__main__)
         info_grp["constr_params"] = constr_params
         info_grp["solve_params"] = solve_params
+        info_grp["solver"] = S

@@ -44,3 +44,4 @@ if mpi.is_master_node():
         info_grp["script"] = inspect.getsource(__main__)
         info_grp["constr_params"] = constr_params
         info_grp["solve_params"] = solve_params
+        info_grp["solver"] = S
