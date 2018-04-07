@@ -1,4 +1,7 @@
-execfile('../system.py')
+import sys, os
+sys.path.append(os.getcwd() + "/..")
+sys.path.append(os.getcwd() + "/../../common")
+from model import *
 
 from pytriqs.archive import HDFArchive
 from math import exp
