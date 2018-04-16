@@ -22,5 +22,5 @@ for bl, idx_lst in gf_struct:
         ed.set_g2_iwn(G_iw[bl][i,j], c(bl,i), c_dag(bl,j))
 
 # -------- Save in archive ---------
-with HDFArchive("../results/ed.h5",'w') as res:
+with HDFArchive("../results/pyed.h5",'w') as res:
     res["G"] = G_iw

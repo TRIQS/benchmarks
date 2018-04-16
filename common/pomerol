@@ -28,7 +28,7 @@ ed = PomerolED(index_converter, verbose = True)
 
 # --------- Calculate the single-particle Green function ----------
 ed.diagonalize(h_imp)
-G_iw = ed.G_iw(dict([(v[0],v[1]) for v in gf_struct]), beta, n_iw)
+G_iw = ed.G_iw([(bl, idx_lst) for bl, idx_lst in gf_struct], beta, n_iw)
 
 # -------- Save in archive ---------
 with HDFArchive("../results/pomerol.h5",'w') as res:

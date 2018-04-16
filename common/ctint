@@ -12,7 +12,7 @@ from triqs_ctint import SolverCore, version
 # --------- Construct the CTINT solver ----------
 constr_params = {
         'beta' : beta,
-        'gf_struct' : dict(gf_struct),
+        'gf_struct' : gf_struct,
         'n_iw' : n_iw,
         'n_tau' : 100001
         }
