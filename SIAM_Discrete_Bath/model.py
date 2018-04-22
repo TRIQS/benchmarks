@@ -43,9 +43,5 @@ Delta << sum([V_i*V_i * inverse(iOmega_n - E_i) for V_i,E_i in zip(V, E)]);
 
 # ==== Non-Interacting Impurity Green function  ====
 G0_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
-G0_iw['up'] << inverse(iOmega_n + mu + h) # FIXME Set tails explicitly
-G0_iw['dn'] << inverse(iOmega_n + mu - h) # FIXME Set tails explicitly
-
-for iw in iw_mesh:
-    G0_iw['up'][iw] = 1.0 / (iw + mu + h - Delta['up'][iw])
-    G0_iw['dn'][iw] = 1.0 / (iw + mu - h - Delta['dn'][iw])
+G0_iw['up'] << inverse(iOmega_n + mu + h - Delta['up'])
+G0_iw['dn'] << inverse(iOmega_n + mu - h - Delta['dn'])
