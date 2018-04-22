@@ -37,6 +37,11 @@ solve_params = {
         'length_cycle' : 100,
         'alpha' : alpha,
         'measure_M_tau' : True,
+        'measure_chi2pp_tau' : True,
+        'measure_chi2ph_tau' : True,
+        'n_iw_chi2' : n_iw,
+        'n_tau_chi2' : 2*n_iw + 1,
+        'n_s' : 2, 
         'post_process' : True
         }
 S.solve(**solve_params)
@@ -45,6 +50,10 @@ S.solve(**solve_params)
 if mpi.is_master_node():
     with HDFArchive("../results/ctint.h5",'w') as results:
         results["G"] = S.G_iw
+        results["chi2pp_iw"] = S.chi2pp_iw
+        results["chi2ph_iw"] = S.chi2ph_iw
+        results["chi2pp_tau"] = S.chi2pp_tau
+        results["chi2ph_tau"] = S.chi2ph_tau
 
         import inspect
         import __main__

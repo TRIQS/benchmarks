@@ -8,33 +8,33 @@ from pytriqs.plot.mpl_interface import oplot, plt
 from glob import glob
 from os.path import basename
 
-# === Load Green function for every solver and calculate self-energy
+# === Load chi2pp and chi2ph for every solver
 
 solver_lst = [ basename(f).strip('.h5') for f in glob('results/*.h5') ]
-G, Sigma = {}, {}
+chi2pp_tau, chi2ph_tau = {}, {}
 
 for solver in solver_lst:
     dat = HDFArchive('results/' + solver + '.h5','r')
-    G[solver] = dat['G']
-    Sigma[solver] = G0_iw.copy()
-    Sigma[solver] << inverse(G0_iw) - inverse(G[solver])
+    chi2pp_tau[solver] = dat['chi2pp_tau']
+    chi2ph_tau[solver] = dat['chi2ph_tau']
+    
+# === For every block and solver, plot chi2pp and chi2ph
 
-# === For every block and solver, plot Green function and Self energy
-
-block_lst = list(G[solver_lst[0]].indices)
+block_lst = [bl for bl in chi2pp_tau[solver_lst[0]].indices]
 n_blocks = len(block_lst)
 
-for g, name in [[G, 'G'], [Sigma, '$\Sigma$']]:
+for chi2, name in [[chi2pp_tau, r'$\chi_2^{\rm PP}$'], [chi2ph_tau, r'$\chi_2^{\rm PH}$']]:
 
-    plt.subplots(n_blocks,1,figsize=(10,6*n_blocks))
+    for block in block_lst:
 
-    for i, block in enumerate(block_lst,1):
-        fig = plt.subplot(n_blocks,1,i)
-        fig.set_title(name + "[" + block + "]")
+        if max(norm_inf(chi2[solver][block][0,0,0,0]) for solver in solver_lst) < 1e-14: continue
+        
+        plt.figure(figsize=(10,6))
         for solver in solver_lst:
-            oplot(g[solver][block][0,0], name = name + "[0,0]_%s" % solver)
-        plt.xlabel("$\omega_n$")
-        plt.ylabel(name + "[" + block + "]$(i\omega_n)$")
+            oplot(chi2[solver][block][0,0,0,0], name = name + "_%s" % solver)
 
-    plt.tight_layout()
-    plt.show()
+        plt.suptitle(name + "[" + str(block) + r"][0,0,0,0]", fontsize=14, y=1.05)
+        plt.xlabel(r"$\tau$")
+
+        plt.tight_layout()
+        plt.show()

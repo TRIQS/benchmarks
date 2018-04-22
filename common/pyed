@@ -21,6 +21,45 @@ for bl, idx_lst in gf_struct:
     for i, j in product(idx_lst, idx_lst):
         ed.set_g2_iwn(G_iw[bl][i,j], c(bl,i), c_dag(bl,j))
 
+# --------- Calculate chi2 ----------
+n_tau = (2 * n_iw + 1)
+tau_mesh = MeshImTime(beta, 'Boson', n_tau)
+chi2pp_tau = Block2Gf_from_struct(mesh=tau_mesh, struct=gf_struct)
+chi2ph_tau = chi2pp_tau.copy()
+
+iW_mesh = MeshImFreq(beta, 'Boson', n_iw)
+chi2pp_iw = Block2Gf_from_struct(mesh=iW_mesh, struct=gf_struct)
+chi2ph_iw = chi2pp_iw.copy()
+
+for (bl1, idx1_lst), (bl2, idx2_lst) in product(gf_struct, gf_struct):
+
+    for i, j, k, l in product(idx1_lst, idx1_lst, idx2_lst, idx2_lst): 
+
+        # --- chi2 in imaginary time
+        ed.set_g2_tau(  chi2pp_tau[(bl1, bl2)][i, j, k, l], \
+                        c_dag(bl1,i) * c_dag(bl2,k), c(bl1,j) * c(bl2,l) )
+        ed.set_g2_tau(  chi2ph_tau[(bl1, bl2)][i, j, k, l], \
+                        c_dag(bl1,i) * c(bl1,j), c_dag(bl2,k) * c(bl2,k) )
+
+        # --- chi2 in Matsubara frequencies
+        ed.set_g2_iwn(  chi2pp_iw[(bl1, bl2)][i, j, k, l], \
+                        c_dag(bl1,i) * c_dag(bl2,k), c(bl1,j) * c(bl2,l) )
+        ed.set_g2_iwn(  chi2ph_iw[(bl1, bl2)][i, j, k, l], \
+                        c_dag(bl1,i) * c(bl1,j), c_dag(bl2,k) * c(bl2,l) )
+
+    chi2pp_tau[(bl1,bl2)] *= -1.0  # Resort operators, since we want <cdag c(0^{+}) cdag c(0)>
+    chi2pp_iw[(bl1,bl2)] *= -1.0  # Resort operators, since we want <cdag c(0^{+}) cdag c(0)>
+
+    # FIXME Overall Minus-sign in definition?
+    chi2pp_tau[(bl1,bl2)] *= -1.0
+    chi2pp_iw[(bl1,bl2)] *= -1.0
+    chi2ph_tau[(bl1,bl2)] *= -1.0
+    chi2ph_iw[(bl1,bl2)] *= -1.0
+
 # -------- Save in archive ---------
 with HDFArchive("../results/pyed.h5",'w') as res:
     res["G"] = G_iw
+    res["chi2pp_tau"] = chi2pp_tau
+    res["chi2ph_tau"] = chi2ph_tau
+    res["chi2pp_iw"] = chi2pp_iw
+    res["chi2ph_iw"] = chi2ph_iw

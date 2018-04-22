@@ -8,9 +8,9 @@ from itertools import product
 
 # ==== System Parameters ====
 beta = 5.           # Inverse temperature
-mu = 2.             # Chemical potential
+mu = 3.             # Chemical potential
 U = 5.              # On-site density-density interaction
-h = 0.2             # Local magnetic field
+h = 0.1             # Local magnetic field
 
 spin_names = ['up', 'dn']
 orb_names  = [0]
