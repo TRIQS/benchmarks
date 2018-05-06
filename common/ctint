@@ -25,7 +25,7 @@ S = SolverCore(**constr_params)
 S.G0_iw << G0_iw
 
 # --------- The alpha tensor ----------
-print "Determine alpha-tensor from SC Hartree Fock solution"
+mpi_print("Determine alpha-tensor from SC Hartree Fock solution")
 
 # Flatten a block vector of matrices
 def flatten(Sig_HF):
@@ -78,8 +78,8 @@ root_finder = root(f, flatten(Sig_HF_init))
 delta = 0.2
 if root_finder['success']:
     Sig_HF = unflatten(root_finder['x'])
-    print "  -- Found Sigma_HF : "
-    for bl, Sig_HF_bl in Sig_HF: print "    ", bl, str(Sig_HF_bl).replace('\n',',')
+    mpi_print("  -- Found Sigma_HF : ")
+    for bl, Sig_HF_bl in Sig_HF: mpi_print("    " + str(bl) + str(Sig_HF_bl).replace('\n',','))
     G_iw = G0_iw.copy()
     alpha = []
     for bl, G0_bl in G0_iw:
@@ -87,11 +87,11 @@ if root_finder['success']:
         s = 1 if (bl == 'up') else -1
         alpha.append( [[val.real + s * delta] for val in np.diag(G_iw[bl].density()) ] )
 else:
-    print "Could not determine Hartree Fock solution, falling back to manual alpha"
+    mpi_print("Could not determine Hartree Fock solution, falling back to manual alpha")
     indices = gf_struct[0][1]
     alpha = [ [[0.5 + delta] for i in indices ], [[0.5 - delta] for i in indices ] ]
 
-print "  -- Alpha Tensor : ", alpha
+mpi_print("  -- Alpha Tensor : " + str(alpha))
 
 # --------- Solve! ----------
 solve_params = {
