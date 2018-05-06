@@ -59,14 +59,14 @@ def f(Sig_HF_flat):
         bl3, u3 = term[1][1]
         bl4, u4 = term[2][1]
 
-        # Consider only density-density interaction terms
-        if (bl1, u1) == (bl2, u2) and (bl3, u3) == (bl4, u4):
-            Sig_HF[bl1][u2, u1] += coef * G_dens[bl3][u4, u3]
-            Sig_HF[bl3][u4, u3] += coef * G_dens[bl1][u2, u1]
+        # # Consider only density-density interaction terms
+        # if (bl1, u1) == (bl2, u2) and (bl3, u3) == (bl4, u4):
+            # Sig_HF[bl1][u2, u1] += coef * G_dens[bl3][u4, u3]
+            # Sig_HF[bl3][u4, u3] += coef * G_dens[bl1][u2, u1]
 
-        # # Full Hatree Fock Solution
-        # Sig_HF[bl1][u2, u1] += coef * G_dens[bl3][u4, u3]
-        # Sig_HF[bl3][u4, u3] += coef * G_dens[bl1][u2, u1]
+        # Full Hatree Fock Solution
+        Sig_HF[bl1][u2, u1] += coef * G_dens[bl3][u4, u3]
+        Sig_HF[bl3][u4, u3] += coef * G_dens[bl1][u2, u1]
 
     return Sig_HF_flat - flatten(list(Sig_HF.iteritems()))
 
@@ -75,7 +75,6 @@ Sig_HF_init = [[bl, np.zeros((len(idx_lst), len(idx_lst)))] for bl, idx_lst in g
 root_finder = root(f, flatten(Sig_HF_init))
 
 # --- Determine alpha from the Hartree Fock solution
-assert(len(gf_struct) == 2) # Assume 'up', 'dn' block structure
 delta = 0.2
 if root_finder['success']:
     Sig_HF = unflatten(root_finder['x'])
