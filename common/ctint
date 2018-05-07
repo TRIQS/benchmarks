@@ -7,7 +7,7 @@ from model import *
 
 from pytriqs.archive import HDFArchive
 from pytriqs.utility import mpi
-from triqs_ctint import SolverCore, version
+from triqs_ctint import Solver, version
 
 import numpy as np
 from scipy.optimize import root
@@ -19,79 +19,10 @@ constr_params = {
         'n_iw' : n_iw,
         'n_tau' : 100001
         }
-S = SolverCore(**constr_params)
+S = Solver(**constr_params)
 
 # --------- Initialize G0_iw ----------
 S.G0_iw << G0_iw
-
-# --------- The alpha tensor ----------
-mpi_print("Determine alpha-tensor from SC Hartree Fock solution")
-
-# Flatten a block vector of matrices
-def flatten(Sig_HF):
-    return np.array([Sig_bl.flatten() for bl, Sig_bl in Sig_HF]).flatten()
-
-# Unflatten a block vector of matrices
-def unflatten(Sig_HF_flat):
-    offset = 0
-    Sig_HF = []
-    for bl, indices in gf_struct:
-        N = len(indices)
-        Sig_HF.append([bl, Sig_HF_flat[range(offset, offset + N**2)].reshape((N,N))])
-        offset = offset + N**2
-    return Sig_HF
-
-# --- Determine the self-consistent Hartree Fock solution via root finding
-
-# Find the root of this function
-def f(Sig_HF_flat):
-    Sig_HF = dict(unflatten(Sig_HF_flat))
-    G_iw = G0_iw.copy()
-    G_dens = {}
-    for bl, G0_bl in G0_iw:
-        G_iw[bl] << inverse( inverse(G0_bl) - Sig_HF[bl] )
-        G_dens[bl] = G_iw[bl].density().real
-        Sig_HF[bl][:] = 0
-
-    for term, coef in h_int:
-        bl1, u1 = term[0][1]
-        bl2, u2 = term[3][1]
-        bl3, u3 = term[1][1]
-        bl4, u4 = term[2][1]
-
-        # # Consider only density-density interaction terms
-        # if (bl1, u1) == (bl2, u2) and (bl3, u3) == (bl4, u4):
-            # Sig_HF[bl1][u2, u1] += coef * G_dens[bl3][u4, u3]
-            # Sig_HF[bl3][u4, u3] += coef * G_dens[bl1][u2, u1]
-
-        # Full Hatree Fock Solution
-        Sig_HF[bl1][u2, u1] += coef * G_dens[bl3][u4, u3]
-        Sig_HF[bl3][u4, u3] += coef * G_dens[bl1][u2, u1]
-
-    return Sig_HF_flat - flatten(list(Sig_HF.iteritems()))
-
-# Invoke the root finder
-Sig_HF_init = [[bl, np.zeros((len(idx_lst), len(idx_lst)))] for bl, idx_lst in gf_struct]
-root_finder = root(f, flatten(Sig_HF_init))
-
-# --- Determine alpha from the Hartree Fock solution
-delta = 0.2
-if root_finder['success']:
-    Sig_HF = unflatten(root_finder['x'])
-    mpi_print("  -- Found Sigma_HF : ")
-    for bl, Sig_HF_bl in Sig_HF: mpi_print("    " + str(bl) + str(Sig_HF_bl).replace('\n',','))
-    G_iw = G0_iw.copy()
-    alpha = []
-    for bl, G0_bl in G0_iw:
-        G_iw[bl] << inverse( inverse(G0_bl) - dict(Sig_HF)[bl] )
-        s = 1 if (bl == 'up') else -1
-        alpha.append( [[val.real + s * delta] for val in np.diag(G_iw[bl].density()) ] )
-else:
-    mpi_print("Could not determine Hartree Fock solution, falling back to manual alpha")
-    indices = gf_struct[0][1]
-    alpha = [ [[0.5 + delta] for i in indices ], [[0.5 - delta] for i in indices ] ]
-
-mpi_print("  -- Alpha Tensor : " + str(alpha))
 
 # --------- Solve! ----------
 solve_params = {
@@ -99,9 +30,6 @@ solve_params = {
         'n_warmup_cycles' : 1000,
         'n_cycles' : 10000000,
         'length_cycle' : 100,
-        'alpha' : alpha,
-        'measure_M_tau' : True,
-        'post_process' : True
         }
 S.solve(**solve_params)
 
