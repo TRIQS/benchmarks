@@ -9,9 +9,6 @@ from pytriqs.archive import HDFArchive
 from pytriqs.utility import mpi
 from triqs_ctint import Solver, version
 
-import numpy as np
-from scipy.optimize import root
-
 # --------- Construct the CTINT solver ----------
 constr_params = {
         'beta' : beta,
