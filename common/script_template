@@ -1,0 +1,45 @@
+#!/usr/bin/env python
+
+# ==== Instructions ====
+# 1. Copy or link this file into a MODEL/scripts directory
+# 2. Adjust this file for your solver
+# 3. Run the adjusted script from the MODEL/scripts directory
+# 4. Check that your results have been properly generated to MODEL/results/your_solver.h5
+# 5. Open and run the MODEL/notebook.ipynb file in Jupyter
+
+import sys, os
+sys.path.append(os.getcwd() + "/..")
+sys.path.append(os.getcwd() + "/../../common")
+from model import *
+
+from pytriqs.archive import HDFArchive
+from pytriqs.utility import mpi
+import pytriqs.version as triqs_info
+
+# --------- Initialize your Solver  ----------
+# ...
+
+# --------- Call your Solver ----------
+# ... 
+
+# --------- Fill G_iw with the Result of your Solver ----------
+# Please maintain the structure of G0_iw
+G_iw = G0_iw.copy()
+# ...
+
+# -------- Save in archive ---------
+if mpi.is_master_node():
+    with HDFArchive("../results/REPLACE.h5",'w') as results:
+        results["G"] = G_iw
+
+        import inspect
+        import __main__
+        results.create_group("Solver_Info")
+        info_grp = results["Solver_Info"]
+        info_grp["solver_name"] = "REPLACE"
+        info_grp["solver_version"] = "REPLACE"
+        info_grp["solver_git_hash"] = "REPLACE"
+        info_grp["triqs_version"] = triqs_info.version
+        info_grp["triqs_git_hash"] = triqs_info.git_hash
+        info_grp["script"] = inspect.getsource(__main__)
+        info_grp["num_threads"] = mpi.world.Get_size()
