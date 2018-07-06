@@ -14,25 +14,25 @@ mu = 0.25                           # Chemical potential
 eps = array([0.0, 0.1, 0.2])        # Impurity site energies
 t = 1.                              # Hopping between impurity sites
 
-eps_bath = array([0.2, 0.15, 0.1])  # Bath site energies
-t_bath = 0.1                        # Hopping between bath sites
+eps_bath = array([0.3, 0.05, 0.15]) # Bath site energies
+t_bath = 0.0                        # Hopping between bath sites
 
 U = 1.                              # Density-density interaction for opposite spins
-Up = 0.3                            # Density-density interaction for equal spins
-J = 0.5                             # Hunds coupling
+Up = 1.                             # Density-density interaction for equal spins
+J = 0.2                             # Hunds coupling
 
 spin_names = ['up', 'dn']
 orb_names  = [0, 1, 2]
 
 # Non-interacting impurity hamiltonian in matrix representation
-h_0_mat = diag(eps - mu) - matrix([[0, t, 0],
+h_0_mat = diag(eps - mu) - matrix([[0, t, t],
                                    [t, 0, t],
-                                   [0, t, 0]])
+                                   [t, t, 0]])
 
 # Bath hamiltonian in matrix representation
-h_bath_mat = diag(eps_bath) - matrix([[0,       t_bath, 0       ],
+h_bath_mat = diag(eps_bath) - matrix([[0,       t_bath, t_bath  ],
                                       [t_bath,  0,      t_bath  ],
-                                      [0,       t_bath, 0       ]])
+                                      [t_bath,  t_bath, 0       ]])
 
 # Coupling matrix
 V_mat = matrix([[1., 0., 0.],
@@ -46,12 +46,12 @@ c_vec =     { s: matrix([[c(s,o)] for o in orb_names]) for s in spin_names }
 h_0 = sum(c_dag_vec[s] * h_0_mat * c_vec[s] for s in spin_names)[0,0]
 
 h_int = h_int_kanamori(spin_names, orb_names,
-                        array([[0,      Up-3*J, 0       ],
+                        array([[0,      Up-3*J, Up-3*J  ],
                                [Up-3*J, 0,      Up-3*J  ],
-                               [0,      Up-3*J, 0       ]]),    # Interaction for equal spins
-                        array([[U,      U-2*J,  0       ],
+                               [Up-3*J, Up-3*J, 0       ]]),    # Interaction for equal spins
+                        array([[U,      U-2*J,  U-2*J   ],
                                [U-2*J,  U,      U-2*J   ],
-                               [0,      U-2*J,  0       ]]),    # Interaction for opposite spins
+                               [U-2*J,  U-2*J,  U       ]]),    # Interaction for opposite spins
                         J,True)
 
 h_loc = h_0 + h_int
@@ -71,7 +71,7 @@ h_imp = h_loc + h_coup + h_bath
 gf_struct = [ [s, orb_names] for s in spin_names ]
 
 # ==== Hybridization Function ====
-n_iw = 10
+n_iw = int(10 * beta)
 iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
 Delta = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
 Delta << inverse(iOmega_n - V_mat * h_bath_mat * V_mat);

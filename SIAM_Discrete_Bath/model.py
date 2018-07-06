@@ -36,7 +36,7 @@ h_imp = h_loc + h_coup + h_bath
 gf_struct = [ [s, orb_names] for s in spin_names ]
 
 # ==== Hybridization Function ====
-n_iw = 20
+n_iw = int(10 * beta)
 iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
 Delta = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
 Delta << sum([V_i*V_i * inverse(iOmega_n - E_i) for V_i,E_i in zip(V, E)]);
