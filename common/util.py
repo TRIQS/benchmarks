@@ -1,3 +1,6 @@
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 from pytriqs.gf import *
 from pytriqs.operators import c, c_dag, n, dagger
 from pytriqs.utility import mpi
