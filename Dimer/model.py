@@ -9,17 +9,17 @@ from itertools import product
 from numpy import matrix, array, diag
 
 # ==== System Parameters ====
-beta = 5.                       # Inverse temperature
-mu = 0.25                       # Chemical potential
+beta = 10.                      # Inverse temperature
+mu = 0.0                        # Chemical potential
 eps = array([0.0, 0.1])         # Impurity site energies
-t = 1.                          # Hopping between impurity sites
+t = 0.2                         # Hopping between impurity sites
 
-eps_bath = array([0.15, 0.05])  # Bath site energies
+eps_bath = array([0.27, -0.4])  # Bath site energies
 t_bath = 0.0                    # Hopping between bath sites
 
-U = 1.                          # Density-density interaction for opposite spins
-Up = 1.                         # Density-density interaction for equal spins
-J = 0.2                         # Hunds coupling
+U = 2.                          # On-site interaction
+V = 1.                          # Intersite interaction
+J = 0.5                         # Hunds coupling
 
 spin_names = ['up', 'dn']
 orb_names  = [0, 1]
@@ -33,8 +33,8 @@ h_bath_mat = diag(eps_bath) - matrix([[0, t_bath],
                                       [t_bath, 0]])
 
 # Coupling matrix
-V_mat = matrix([[1., 0.],
-                [0., 1.]])
+V_mat = matrix([[1., 1.],
+                [1., 1.]])
 
 # ==== Local Hamiltonian ====
 c_dag_vec = { s: matrix([[c_dag(s,o) for o in orb_names]]) for s in spin_names }
@@ -43,10 +43,10 @@ c_vec =     { s: matrix([[c(s,o)] for o in orb_names]) for s in spin_names }
 h_0 = sum(c_dag_vec[s] * h_0_mat * c_vec[s] for s in spin_names)[0,0]
 
 h_int = h_int_kanamori(spin_names, orb_names,
-                        array([[0,      Up-3*J ],
-                               [Up-3*J, 0      ]]), # Interaction for equal spins
-                        array([[U,      U-2*J  ],
-                               [U-2*J,  U      ]]),   # Interaction for opposite spins
+                        array([[0,      V-J ],
+                               [V-J   , 0   ]]), # Interaction for equal spins
+                        array([[U,      V ],
+                               [V,      U ]]),   # Interaction for opposite spins
                         J,True)
 
 h_loc = h_0 + h_int
