@@ -6,7 +6,8 @@ from pytriqs.gf import Gf, MeshImFreq, iOmega_n, inverse
 from pytriqs.operators import c, c_dag, n
 from pytriqs.operators.util.hamiltonians import h_int_kanamori
 from itertools import product
-from numpy import matrix, array, diag
+from numpy import matrix, array, diag, eye
+from numpy.linalg import inv
 
 # ==== System Parameters ====
 beta = 5.                           # Inverse temperature
@@ -74,7 +75,9 @@ gf_struct = [ [s, orb_names] for s in spin_names ]
 n_iw = int(10 * beta)
 iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
 Delta = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
-Delta << inverse(iOmega_n - V_mat * h_bath_mat * V_mat);
+# FIXME Delta['up'] << V_mat * inverse(iOmega_n - h_bath_mat) * V_mat.transpose()
+for bl, iw in product(spin_names, iw_mesh):
+    Delta[bl][iw] = V_mat * inv(iw.value * eye(len(orb_names)) - h_bath_mat) * V_mat.transpose()
 
 # ==== Non-Interacting Impurity Green function  ====
 G0_iw = Delta.copy()

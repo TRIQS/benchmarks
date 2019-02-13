@@ -11,7 +11,7 @@ from os.path import basename
 # === Load Green function for every solver and calculate self-energy
 
 solver_lst = [ basename(f).strip('.h5') for f in glob('results/*.h5') ]
-marker_lst = ['-x', '-+', '-^', '-v', '-<', '->']
+marker_lst = ['-x', '-+', '-^', '-v', '-<', '->', '-*', '-p']
 G, Sigma = {}, {}
 
 for solver in solver_lst:
