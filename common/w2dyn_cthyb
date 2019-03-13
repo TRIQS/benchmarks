@@ -14,7 +14,8 @@ constr_params = {
         'beta' : beta,
         'gf_struct' : gf_struct,
         'n_iw' : n_iw,
-        'n_tau' : 100001
+        'n_tau' : 100001,
+        'complex' : not is_gf_real_in_tau(Delta, 1e-6)
         }
 S = Solver(**constr_params)
 
