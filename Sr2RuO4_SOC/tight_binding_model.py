@@ -27,10 +27,14 @@ def extend_wannier90_to_spin(hopping, num_wann):
     return hopping_spin, 2 * num_wann
 
 # ----------------------------------------------------------------------
-def tight_binding_model(crystal_field=0., lambda_soc=0.):
+def tight_binding_model(crystal_field=0., lambda_soc=0.): 
 
-    path = os.path.dirname(__file__)
-    
+    paths = [os.getcwd(), os.path.dirname(__file__)]
+    for p in paths:
+        if os.path.isfile(p + '/w2w_hr.dat'):
+            path = p
+            break
+
     # -- Read Wannier90 results
 
     hopping, num_wann = parse_hopping_from_wannier90_hr_dat(path + '/w2w_hr.dat')
