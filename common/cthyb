@@ -27,6 +27,8 @@ solve_params = {
         'n_warmup_cycles' : 1000,
         'n_cycles' : 10000000,
         'length_cycle' : 100,
+        'move_double' : True,
+        'measure_pert_order' : True
         }
 start = time.time()
 S.solve(**solve_params)
