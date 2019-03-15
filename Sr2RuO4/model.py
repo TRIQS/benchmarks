@@ -13,8 +13,8 @@ import numpy.linalg as linalg
 from tight_binding_model import *
 
 # ==== System Parameters ====
-beta = 5.                       # Inverse temperature
-mu = 0.                         # Chemical potential
+beta = 25.                     # Inverse temperature
+mu = 5.3938                    # Chemical potential
 
 U = 2.3                         # Density-density interaction
 J = 0.4                         # Hunds coupling
