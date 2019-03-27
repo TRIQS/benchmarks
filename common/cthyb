@@ -25,9 +25,9 @@ S.G0_iw << G0_iw
 solve_params = {
         'h_int' : h_int,
         'n_warmup_cycles' : 10000,
-        'n_cycles' : 1000000,
+        'n_cycles' : 10000000,
         'length_cycle' : 100,
-        'move_double' : True,
+        # 'move_double' : True,
         'measure_pert_order' : True
         }
 start = time.time()

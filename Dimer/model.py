@@ -4,9 +4,9 @@ from util import *
 
 from pytriqs.gf import Gf, MeshImFreq, iOmega_n, inverse
 from pytriqs.operators import c, c_dag, n
-from pytriqs.operators.util.hamiltonians import h_int_kanamori
+from pytriqs.operators.util import h_int_kanamori, U_matrix_kanamori
 from itertools import product
-from numpy import matrix, array, diag, eye
+from numpy import matrix, array, block, diag, eye
 from numpy.linalg import inv
 
 # ==== System Parameters ====
@@ -18,12 +18,12 @@ t = 0.2                         # Hopping between impurity sites
 eps_bath = array([0.27, -0.4])  # Bath site energies
 t_bath = 0.0                    # Hopping between bath sites
 
-U = 2.                          # On-site interaction
-V = 1.                          # Intersite interaction
-J = 0.5                         # Hunds coupling
+U = 1.                          # Density-density interaction
+J = 0.2                         # Hunds coupling
 
 spin_names = ['up', 'dn']
 orb_names  = [0, 1]
+n_orb = len(orb_names)
 
 # Non-interacting impurity hamiltonian in matrix representation
 h_0_mat = diag(eps - mu) - matrix([[0, t],
@@ -43,12 +43,8 @@ c_vec =     { s: matrix([[c(s,o)] for o in orb_names]) for s in spin_names }
 
 h_0 = sum(c_dag_vec[s] * h_0_mat * c_vec[s] for s in spin_names)[0,0]
 
-h_int = h_int_kanamori(spin_names, orb_names,
-                        array([[0,      V-J ],
-                               [V-J   , 0   ]]), # Interaction for equal spins
-                        array([[U,      V ],
-                               [V,      U ]]),   # Interaction for opposite spins
-                        J,True)
+Umat, Upmat = U_matrix_kanamori(n_orb, U_int=U, J_hund=J)
+h_int = h_int_kanamori(spin_names, orb_names, Umat, Upmat, J, off_diag=True)
 
 h_loc = h_0 + h_int
 
@@ -66,15 +62,16 @@ h_imp = h_loc + h_coup + h_bath
 # ==== Green function structure ====
 gf_struct = [ [s, orb_names] for s in spin_names ]
 
-# ==== Hybridization Function ====
+# ==== Non-Interacting Impurity Green function  ====
 n_iw = int(10 * beta)
 iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
-Delta = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
-# FIXME Delta['up'] << V_mat * inverse(iOmega_n - h_bath_mat) * V_mat.transpose()
+G0_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
+h_imp_mat = block([[h_0_mat, V_mat     ],
+                   [V_mat.H, h_bath_mat]])
 for bl, iw in product(spin_names, iw_mesh):
-    Delta[bl][iw] = V_mat * inv(iw.value * eye(len(orb_names)) - h_bath_mat) * V_mat.transpose()
+    G0_iw[bl][iw] = inv(iw.value * eye(2*n_orb) - h_imp_mat)[:n_orb, :n_orb]
 
-# ==== Non-Interacting Impurity Green function  ====
-G0_iw = Delta.copy()
-G0_iw['up'] << inverse(iOmega_n - h_0_mat - Delta['up']) # FIXME Should work for BlockGf
-G0_iw['dn'] << inverse(iOmega_n - h_0_mat - Delta['dn'])
+# ==== Hybridization Function ====
+Delta = G0_iw.copy()
+Delta['up'] << iOmega_n - h_0_mat - G0_iw['up']
+Delta['dn'] << iOmega_n - h_0_mat - G0_iw['dn']
