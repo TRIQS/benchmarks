@@ -37,7 +37,7 @@ end = time.time()
 # -------- Save in archive ---------
 if mpi.is_master_node():
     with HDFArchive("../results/cthyb.h5",'w') as results:
-        results["G"] = S.G_iw
+        results["G"] = S.G_iw_raw
 
         import inspect
         import __main__
