@@ -4,10 +4,13 @@ import sys, os, time
 sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
 from model import *
+import numpy as np
+from numpy import linalg
 
 from pytriqs.archive import HDFArchive
 from pytriqs.utility import mpi
 from triqs_ctseg import Solver, version
+
 
 # --------- Construct the CTSEG solver ----------
 constr_params = {
@@ -18,6 +21,29 @@ constr_params = {
         }
 S = Solver(**constr_params)
 
+# --- We need to rotate G0_iw into the local eigenbasis
+def get_h0_Delta(G_iw):
+    """
+    This function extracts the h_0 as well as Delta(iw) component
+    for a BlockGf G_iw of the form 1/(iw - h_0 - Delta(iw))
+    """
+    assert isinstance(G_iw, BlockGf)
+    h0_lst, Delta_iw = [], G_iw.copy()
+    for bl in G_iw.indices:
+        Delta_iw[bl] << iOmega_n - inverse(G_iw[bl])
+        tail, err = fit_hermitian_tail(Delta_iw[bl])
+        Delta_iw[bl] << Delta_iw[bl] - tail[0]
+        h0_lst.append(tail[0])
+    return h0_lst, Delta_iw
+
+# Get the rotations to the eigenbasis for each block of G0_iw
+h0, Delta_iw = get_h0_Delta(G0_iw)
+rot_lst = [np.matrix(linalg.eig(h0_bl)[1]) for h0_bl in h0]
+
+# Rotate G0_iw
+for (bl, g0_bl), rot_bl in zip(G0_iw, rot_lst):
+    g0_bl << rot_bl.H * g0_bl * rot_bl
+
 # --------- Initialize G0_iw ----------
 S.G0_iw << G0_iw
 
@@ -26,11 +52,20 @@ solve_params = {
         'h_int' : h_int,
         'n_warmup_cycles' : 10000,
         'n_cycles' : 1000000,
-        'length_cycle' : 100,
+        'length_cycle' : 100
         }
 start = time.time()
 S.solve(**solve_params)
 end = time.time()
+
+print "Average sign: ", S.average_sign
+
+# Rotate back G0_iw and G_tau
+for (bl, g0_bl), rot_bl in zip(S.G0_iw, rot_lst):
+    g0_bl << rot_bl * g0_bl * rot_bl.H
+for (bl, g_bl), rot_bl in zip(S.G_tau, rot_lst):
+    g_bl << rot_bl * g_bl * rot_bl.H
+
 
 # -------- Save in archive ---------
 if mpi.is_master_node():
