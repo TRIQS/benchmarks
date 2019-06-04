@@ -71,7 +71,10 @@ for (bl, g_bl), rot_bl in zip(S.G_tau, rot_lst):
 if mpi.is_master_node():
     with HDFArchive("../results/ctseg.h5",'w') as results:
         G_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
-        G_iw << Fourier(S.G_tau)
+        for bl, idx_lst in gf_struct:
+            tail = make_zero_tail(G_iw[bl], 3)
+            tail[1] = np.eye(len(idx_lst))
+            G_iw[bl] << Fourier(S.G_tau[bl], tail)
         results["G"] = G_iw
 
         import inspect
