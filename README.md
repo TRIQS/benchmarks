@@ -20,20 +20,26 @@ Models
 * [**SIAM_Discrete_Bath**](https://github.com/TRIQS/benchmarks/blob/master/SIAM_Discrete_Bath/notebook.ipynb) A dimer with spin-orbit coupling and density-density interaction coupled to two discrete bath states
 * [**SIAM_Wide_Band**](https://github.com/TRIQS/benchmarks/blob/master/SIAM_Wide_Band/notebook.ipynb) A dimer with spin-orbit coupling and density-density interaction coupled to two discrete bath states
 * [**Dimer**](https://github.com/TRIQS/benchmarks/blob/master/Dimer/notebook.ipynb) A dimer with Kanamori-Interaction coupled to two discrete bath states
-* [**Dimer_SO**](https://github.com/TRIQS/benchmarks/blob/master/Dimer_SO/notebook.ipynb) A dimer with spin-orbit coupling and density-density interaction coupled to two discrete bath states
+* [**Dimer_SOC**](https://github.com/TRIQS/benchmarks/blob/master/Dimer_SOC/notebook.ipynb) A dimer with spin-orbit coupling and density-density interaction coupled to two discrete bath states
 * [**Trimer**](https://github.com/TRIQS/benchmarks/blob/master/Trimer/notebook.ipynb) A trimer with Kanamori-Interaction coupled to three discrete bath states
+* [**SrRuO4**](https://github.com/TRIQS/benchmarks/blob/master/SrRuO4/notebook.ipynb) An effective 3-band impurity model for SrRuO4
+* [**SrRuO4_SOC**](https://github.com/TRIQS/benchmarks/blob/master/SrRuO4/notebook.ipynb) An effective 3-band impurity model for SrRuO4 including spin-orbit coupling
 
 Impurity Solvers
 ----------------
 
 * [**triqs_cthyb**](https://github.com/TRIQS/cthyb) - Continuous-time hybridization-expansion quantum Monte-Carlo code based on TRIQS.
   Maintainer: [Hugo Strand](mailto:hstrand@flatironinstitute.org)
+* [**triqs_ctseg**](https://github.com/TRIQS/ctseg) - Continuous-time hybridization-expansion quantum Monte-Carlo code in the segment picture (private).
+  Maintainer: [Thomas Ayral](mailto:th.ayral@gmail.com)
 * [**triqs_ctint**](https://github.com/TRIQS/ctint) - Continuous-time interaction-expansion quantum Monte-Carlo code based on TRIQS (private).
   Maintainer: [Nils Wentzell](mailto:nils.wentzell@gmail.com)
-* [**pyed**](https://github.com/hugostrand) - Exact diagonalization solver for finite quantum systems based on TRIQS.
+* [**pyed**](https://github.com/hugostrand/pyed) - Exact diagonalization solver for finite quantum systems based on TRIQS.
   Maintainer: [Hugo Strand](mailto:hstrand@flatironinstitute.org)
-* [**pomerol**](https://github.com/aeantipov/pomerol) - An exact diagonalization (full-ED) code written in C++ aimed at solving condensed matter second-quantized models of interacting fermions on finite size lattices at finite temperatures. It is designed to produce single and two-particle Greens functions.
+* [**pomerol**](https://github.com/aeantipov/pomerol) - An exact diagonalization (full-ED) code written in C++ aimed at solving condensed matter second-quantized models of interacting fermions on finite size lattices at finite temperatures. It is designed to produce single and two-particle Greens functions. ([TRIQS Interface](https://github.com/krivenko/pomerol2triqs)).
   Maintainer: [Andrey Antipov](mailto:andrey.e.antipov@gmail.com)
+* [**w2dynamics**](https://github.com/TRIQS/w2dynamics/w2dynamics) - A continuous-time hybridization expansion impurity solver contained in the w2dynamics software package ([TRIQS interface](https://github.com/TRIQS/w2dynamics_interface)).
+  Maintainer: [Andreas Hausoel](mailto:andreas.hausoel@physik.uni-wuerzburg.de)
 
 Adding your Solver
 ------------------
