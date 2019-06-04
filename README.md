@@ -28,17 +28,17 @@ Models
 Impurity Solvers
 ----------------
 
-* [**triqs_cthyb**](https://github.com/TRIQS/cthyb) - Continuous-time hybridization-expansion quantum Monte-Carlo code based on TRIQS.
+* [**triqs_cthyb**](https://triqs.github.io/cthyb) - Continuous-time hybridization-expansion quantum Monte-Carlo code based on TRIQS.
   Maintainer: [Hugo Strand](mailto:hstrand@flatironinstitute.org)
-* [**triqs_ctseg**](https://github.com/TRIQS/ctseg) - Continuous-time hybridization-expansion quantum Monte-Carlo code in the segment picture (private).
+* [**triqs_ctseg**](https://triqs.github.io/ctseg) - Continuous-time hybridization-expansion quantum Monte-Carlo code in the segment picture (private).
   Maintainer: [Thomas Ayral](mailto:th.ayral@gmail.com)
-* [**triqs_ctint**](https://github.com/TRIQS/ctint) - Continuous-time interaction-expansion quantum Monte-Carlo code based on TRIQS (private).
+* [**triqs_ctint**](https://triqs.github.io/ctint) - Continuous-time interaction-expansion quantum Monte-Carlo code based on TRIQS (private).
   Maintainer: [Nils Wentzell](mailto:nils.wentzell@gmail.com)
 * [**pyed**](https://github.com/hugostrand/pyed) - Exact diagonalization solver for finite quantum systems based on TRIQS.
   Maintainer: [Hugo Strand](mailto:hstrand@flatironinstitute.org)
 * [**pomerol**](https://github.com/aeantipov/pomerol) - An exact diagonalization (full-ED) code written in C++ aimed at solving condensed matter second-quantized models of interacting fermions on finite size lattices at finite temperatures. It is designed to produce single and two-particle Greens functions. ([TRIQS Interface](https://github.com/krivenko/pomerol2triqs)).
   Maintainer: [Andrey Antipov](mailto:andrey.e.antipov@gmail.com)
-* [**w2dynamics**](https://github.com/TRIQS/w2dynamics/w2dynamics) - A continuous-time hybridization expansion impurity solver contained in the w2dynamics software package ([TRIQS interface](https://github.com/TRIQS/w2dynamics_interface)).
+* [**w2dynamics**](https://github.com/TRIQS/w2dynamics/w2dynamics) - A continuous-time hybridization expansion impurity solver contained in the w2dynamics software package ([TRIQS interface](https://triqs.github.io/w2dynamics_interface)).
   Maintainer: [Andreas Hausoel](mailto:andreas.hausoel@physik.uni-wuerzburg.de)
 
 Adding your Solver
