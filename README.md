@@ -22,8 +22,8 @@ Models
 * [**Dimer**](https://github.com/TRIQS/benchmarks/blob/master/Dimer/notebook.ipynb) A dimer with Kanamori-Interaction coupled to two discrete bath states
 * [**Dimer_SOC**](https://github.com/TRIQS/benchmarks/blob/master/Dimer_SOC/notebook.ipynb) A dimer with spin-orbit coupling and density-density interaction coupled to two discrete bath states
 * [**Trimer**](https://github.com/TRIQS/benchmarks/blob/master/Trimer/notebook.ipynb) A trimer with Kanamori-Interaction coupled to three discrete bath states
-* [**SrRuO4**](https://github.com/TRIQS/benchmarks/blob/master/SrRuO4/notebook.ipynb) An effective 3-band impurity model for SrRuO4
-* [**SrRuO4_SOC**](https://github.com/TRIQS/benchmarks/blob/master/SrRuO4/notebook.ipynb) An effective 3-band impurity model for SrRuO4 including spin-orbit coupling
+* [**Sr2RuO4**](https://github.com/TRIQS/benchmarks/blob/master/Sr2RuO4/notebook.ipynb) An effective 3-band impurity model for Sr2RuO4
+* [**Sr2RuO4_SOC**](https://github.com/TRIQS/benchmarks/blob/master/Sr2RuO4/notebook.ipynb) An effective 3-band impurity model for Sr2RuO4 including spin-orbit coupling
 
 Impurity Solvers
 ----------------
