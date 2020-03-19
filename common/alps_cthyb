@@ -1,0 +1,74 @@
+#!/usr/bin/env python
+from __future__ import print_function
+
+from dcore.impurity_solvers.alps_cthyb import ALPSCTHYBSolver as Solver
+from dcore.tools import make_block_gf, raise_if_mpi_imported
+
+import sys, os, time
+import numpy
+from itertools import product
+sys.path.append(os.getcwd() + "/..")
+sys.path.append(os.getcwd() + "/../../common")
+from model import *
+from dcore_util import *
+
+raise_if_mpi_imported()
+
+import pytriqs
+#from pytriqs.gf import GfImFreq
+#raise_if_mpi_imported()
+from pytriqs.archive import HDFArchive
+#raise_if_mpi_imported()
+#from pytriqs.operators.util.extractors import extract_U_dict4
+
+raise_if_mpi_imported()
+
+#print(pytriqs.version)
+#print(gf_struct)
+norb, gf_struct_dcore, u_mat, G0_iw_dcore = convert_to_dcore_format(gf_struct, h_int, G0_iw, beta, n_iw)
+#print(type(gf_struct.keys()))
+
+constr_params = {
+        'beta' : beta,
+        'gf_struct' : gf_struct_dcore,
+        'n_iw' : n_iw,
+        }
+
+
+# --------- Construct solver ----------
+S = Solver(constr_params["beta"], constr_params["gf_struct"], u_mat, constr_params["n_iw"])
+
+# --------- Initialize G0_iw ----------
+S.set_G0_iw(G0_iw_dcore)
+convert_to_triqs_bname(G0_iw_dcore, gf_struct, beta, n_iw)
+del G0_iw_dcore
+
+# --------- Get command to launch MPI program (i.e, "mpirun -np 8") ----------
+mpirun_command = os.environ["DCORE_MPIRUN_COMMAND"]
+
+# --------- Basis rotation ----------
+rot = None
+
+# --------- Solve! ----------
+solve_params = {
+        "timelimit" : 30,
+        "exec_path" : "hybmat",
+        'random_seed_offset' : 0
+        }
+start = time.time()
+S.solve(rot, mpirun_command, solve_params)
+end = time.time()
+
+# -------- Save in archive ---------
+with HDFArchive("../results/alps_cthyb.h5",'w') as results:
+    results["G"] = convert_to_triqs_bname(S.get_Gimp_iw(), gf_struct, beta, n_iw)
+
+    import inspect
+    import __main__
+    results.create_group("Solver_Info")
+    info_grp = results["Solver_Info"]
+    info_grp["solver_name"] = "alps_cthyb"
+    info_grp["constr_params"] = constr_params
+    #info_grp["triqs_git_hash"] = version.triqs_hash
+    info_grp["script"] = inspect.getsource(__main__)
+    info_grp["run_time"] = end - start
