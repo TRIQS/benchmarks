@@ -15,18 +15,11 @@ from dcore_util import *
 raise_if_mpi_imported()
 
 import pytriqs
-#from pytriqs.gf import GfImFreq
-#raise_if_mpi_imported()
 from pytriqs.archive import HDFArchive
-#raise_if_mpi_imported()
-#from pytriqs.operators.util.extractors import extract_U_dict4
 
 raise_if_mpi_imported()
 
-#print(pytriqs.version)
-#print(gf_struct)
 norb, gf_struct_dcore, u_mat, G0_iw_dcore = convert_to_dcore_format(gf_struct, h_int, G0_iw, beta, n_iw)
-#print(type(gf_struct.keys()))
 
 constr_params = {
         'beta' : beta,
@@ -51,7 +44,7 @@ rot = None
 
 # --------- Solve! ----------
 solve_params = {
-        "timelimit" : 30,
+        "timelimit" : int(os.environ["DCORE_ALPSCTHYB_TIMELIMIT"]),
         "exec_path" : "hybmat",
         'random_seed_offset' : 0
         }
