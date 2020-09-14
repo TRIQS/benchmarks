@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function
+
 
 from dcore.tools import make_block_gf, raise_if_mpi_imported
 
@@ -41,9 +41,9 @@ def convert_to_dcore_format(gf_struct, h_int, G0_iw, beta, n_iw):
      # --------- Construct Coulomb tensor from h_int ----------
      U_dict = extract_U_dict4(h_int)
      u_mat = numpy.zeros((2*norb,)*4, dtype=complex)
-     for idx4, v in U_dict.items():
+     for idx4, v in list(U_dict.items()):
          print("U_dict: ", idx4, v)
-         idx4_ = map(lambda idx: idx_tr[idx], idx4)
+         idx4_ = [idx_tr[idx] for idx in idx4]
          u_mat[idx4_[0], idx4_[1], idx4_[2], idx4_[3]] += v
          print(idx4, idx4_, u_mat[idx4_[0], idx4_[1], idx4_[2], idx4_[3]])
 

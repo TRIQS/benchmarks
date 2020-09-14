@@ -20,7 +20,7 @@ from triqs_tprf.wannier90 import parse_band_structure_from_wannier90_band_dat
 def extend_wannier90_to_spin(hopping, num_wann):
 
     hopping_spin = {}
-    for key, value in hopping.items():
+    for key, value in list(hopping.items()):
         #hopping_spin[key] = np.kron(value, np.eye(2)) # spin fastest idx
         hopping_spin[key] = np.kron(np.eye(2), value) # orbital fastest idx
 
@@ -38,7 +38,7 @@ def tight_binding_model(crystal_field=0., lambda_soc=0.):
     # -- Read Wannier90 results
 
     hopping, num_wann = parse_hopping_from_wannier90_hr_dat(path + '/w2w_hr.dat')
-    orbital_names = [str(i) for i in xrange(num_wann)]
+    orbital_names = [str(i) for i in range(num_wann)]
     units = parse_lattice_vectors_from_wannier90_wout(path + '/w2w.wout')
 
     # -- Extend to spinful model from non-spin polarized Wannier90 result
