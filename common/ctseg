@@ -11,7 +11,6 @@ from h5 import HDFArchive
 from triqs.utility import mpi
 from triqs_ctseg import Solver, version
 
-
 # --------- Construct the CTSEG solver ----------
 constr_params = {
         'beta' : beta,
@@ -58,7 +57,7 @@ start = time.time()
 S.solve(**solve_params)
 end = time.time()
 
-print "Average sign: ", S.average_sign
+print("Average sign: ", S.average_sign)
 
 # Rotate back G0_iw and G_tau
 for (bl, g0_bl), rot_bl in zip(S.G0_iw, rot_lst):

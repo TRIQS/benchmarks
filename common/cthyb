@@ -37,7 +37,7 @@ end = time.time()
 
 hist = S.perturbation_order_total.data
 average_k = 1.0 * np.sum(hist * np.arange(hist.shape[0])) / np.sum(hist)
-if mpi.is_master_node(): print "Average perturbation order:", average_k
+if mpi.is_master_node(): print("Average perturbation order:", average_k)
 
 # -------- Save in archive ---------
 if mpi.is_master_node():
