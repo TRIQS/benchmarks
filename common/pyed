@@ -7,8 +7,8 @@ sys.path.append(os.getcwd() + "/../../common")
 from model import *
 import util
 
-from pytriqs.archive import HDFArchive
-from pytriqs.utility import mpi
+from h5 import HDFArchive
+from triqs.utility import mpi
 from pyed.TriqsExactDiagonalization import TriqsExactDiagonalization
 
 # --------- Construct the ED solver ----------

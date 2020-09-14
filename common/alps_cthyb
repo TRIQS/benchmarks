@@ -14,8 +14,8 @@ from dcore_util import *
 
 raise_if_mpi_imported()
 
-import pytriqs
-from pytriqs.archive import HDFArchive
+import triqs
+from h5 import HDFArchive
 
 raise_if_mpi_imported()
 

@@ -5,7 +5,7 @@ sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
 from model import *
 
-from pytriqs.archive import HDFArchive
+from h5 import HDFArchive
 from math import exp
 
 # Exact expressions for parition function, occupation numbers and Green function

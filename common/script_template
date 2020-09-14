@@ -12,9 +12,9 @@ sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
 from model import *
 
-from pytriqs.archive import HDFArchive
-from pytriqs.utility import mpi
-import pytriqs.version as triqs_info
+from h5 import HDFArchive
+from triqs.utility import mpi
+import triqs.version as triqs_info
 
 # --------- Initialize your Solver  ----------
 # ...
