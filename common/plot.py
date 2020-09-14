@@ -3,8 +3,8 @@ sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
 from model import *
 
-from pytriqs.archive import HDFArchive
-from pytriqs.plot.mpl_interface import oplot, plt
+from h5 import HDFArchive
+from triqs.plot.mpl_interface import oplot, plt
 from glob import glob
 from os.path import basename
 

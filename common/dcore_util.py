@@ -7,9 +7,9 @@ import sys, os, time
 import numpy
 from itertools import product
 
-import pytriqs
-from pytriqs.gf import GfImFreq
-from pytriqs.operators.util.extractors import extract_U_dict4
+import triqs
+from triqs.gf import GfImFreq
+from triqs.operators.util.extractors import extract_U_dict4
 
 raise_if_mpi_imported()
 

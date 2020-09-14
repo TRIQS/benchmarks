@@ -8,7 +8,7 @@ import numpy as np
 
 # ----------------------------------------------------------------------
 
-from pytriqs.lattice.tight_binding import TBLattice, energies_on_bz_path
+from triqs.lattice.tight_binding import TBLattice, energies_on_bz_path
 
 # ----------------------------------------------------------------------
 

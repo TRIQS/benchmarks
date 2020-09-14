@@ -1,7 +1,7 @@
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from pytriqs.utility import mpi
+from triqs.utility import mpi
 
 # print on master node
 def mpi_print(arg):

@@ -2,10 +2,10 @@ import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *
 
-from pytriqs.gf import Gf, MeshImFreq, iOmega_n, inverse, MeshBrillouinZone, MeshProduct
-from pytriqs.lattice import BravaisLattice, BrillouinZone
-from pytriqs.operators import c, c_dag, n
-from pytriqs.operators.util import h_int_kanamori, U_matrix_kanamori
+from triqs.gf import Gf, MeshImFreq, iOmega_n, inverse, MeshBrillouinZone, MeshProduct
+from triqs.lattice import BravaisLattice, BrillouinZone
+from triqs.operators import c, c_dag, n
+from triqs.operators.util import h_int_kanamori, U_matrix_kanamori
 from itertools import product
 from numpy import matrix, array, diag, pi
 import numpy.linalg as linalg

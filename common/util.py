@@ -1,8 +1,8 @@
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from pytriqs.gf import *
-from pytriqs.operators import c, c_dag, n, dagger
+from triqs.gf import *
+from triqs.operators import c, c_dag, n, dagger
 
 # Get a list of all annihilation operators from a many-body operators
 def get_fundamental_operators(op):
