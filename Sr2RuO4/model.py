@@ -40,7 +40,7 @@ h_0 = sum(c_dag_vec[s] * h_0_mat * c_vec[s] for s in spin_names)[0,0]
 Umat, Upmat = U_matrix_kanamori(n_orb, U_int=U, J_hund=J)
 h_int = h_int_kanamori(spin_names, orb_names, Umat, Upmat, J, off_diag=True)
 
-h_loc = h_0 + h_int
+h_imp = h_0 + h_int
 
 
 # ==== Non-Interacting Impurity Green function  ====

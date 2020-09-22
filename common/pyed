@@ -12,8 +12,8 @@ from triqs.utility import mpi
 from pyed.TriqsExactDiagonalization import TriqsExactDiagonalization
 
 # --------- Construct the ED solver ----------
-fundamental_operators = util.get_fundamental_operators(h_imp)
-ed = TriqsExactDiagonalization(h_imp, fundamental_operators, beta)
+fundamental_operators = util.get_fundamental_operators(h_tot)
+ed = TriqsExactDiagonalization(h_tot, fundamental_operators, beta)
 print("Free energy ", ed.get_free_energy())
 
 # --------- Calculate the single-particle Green function ----------

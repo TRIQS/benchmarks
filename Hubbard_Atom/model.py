@@ -18,13 +18,13 @@ orb_names  = [0]
 # ==== Local Hamiltonian ====
 h_0 = - mu*( n('up',0) + n('dn',0) ) - h*( n('up',0) - n('dn',0) )
 h_int = U * n('up',0) * n('dn',0)
-h_loc = h_0 + h_int
+h_imp = h_0 + h_int
 
 # ==== Bath & Coupling Hamiltonian ====
 h_bath, h_coup = 0, 0
 
 # ==== Total impurity hamiltonian and fundamental operators ====
-h_imp = h_loc + h_coup + h_bath
+h_tot = h_imp + h_coup + h_bath
 
 # ==== Green function structure ====
 gf_struct = [ [s, orb_names] for s in spin_names ]

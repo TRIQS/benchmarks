@@ -56,7 +56,7 @@ h_int = U * n('bl', up_0) * n('bl', dn_0) + \
         Up * n('bl', up_0) * n('bl', up_1) + \
         Up * n('bl', dn_0) * n('bl', dn_1)
 
-h_loc = h_0 + h_int
+h_imp = h_0 + h_int
 
 # ==== Bath & Coupling hamiltonian ====
 orb_bath_names = ['b_' + str(o) for o in orb_names]
@@ -67,7 +67,7 @@ h_bath = (c_dag_bath_vec * h_bath_mat * c_bath_vec)[0,0]
 h_coup = (c_dag_vec * V_mat * c_bath_vec + c_dag_bath_vec * V_mat * c_vec)[0,0] # FIXME Adjoint
 
 # ==== Total impurity hamiltonian ====
-h_imp = h_loc + h_coup + h_bath
+h_tot = h_imp + h_coup + h_bath
 
 # ==== Green function structure ====
 gf_struct = [ ['bl', orb_names] ]

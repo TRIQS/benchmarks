@@ -20,7 +20,7 @@ orb_names  = [0]
 # ==== Local Hamiltonian ====
 h_0 = - mu*( n('up',0) + n('dn',0) ) - h*( n('up',0) - n('dn',0) )
 h_int = U * n('up',0) * n('dn',0)
-h_loc = h_0 + h_int
+h_imp = h_0 + h_int
 
 # ==== Green function structure ====
 gf_struct = [ [s, orb_names] for s in spin_names ]

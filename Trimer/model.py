@@ -49,7 +49,7 @@ h_0 = sum(c_dag_vec[s] * h_0_mat * c_vec[s] for s in spin_names)[0,0]
 Umat, Upmat = U_matrix_kanamori(n_orb, U_int=U, J_hund=J)
 h_int = h_int_kanamori(spin_names, orb_names, Umat, Upmat, J, off_diag=True)
 
-h_loc = h_0 + h_int
+h_imp = h_0 + h_int
 
 # ==== Bath & Coupling hamiltonian ====
 orb_bath_names = ['b_' + str(o) for o in orb_names]
@@ -60,7 +60,7 @@ h_bath = sum(c_dag_bath_vec[s] * h_bath_mat * c_bath_vec[s] for s in spin_names)
 h_coup = sum(c_dag_vec[s] * V_mat * c_bath_vec[s] + c_dag_bath_vec[s] * V_mat * c_vec[s] for s in spin_names)[0,0] # FIXME Adjoint
 
 # ==== Total impurity hamiltonian ====
-h_imp = h_loc + h_coup + h_bath
+h_tot = h_imp + h_coup + h_bath
 
 # ==== Green function structure ====
 gf_struct = [ [s, orb_names] for s in spin_names ]
@@ -69,10 +69,10 @@ gf_struct = [ [s, orb_names] for s in spin_names ]
 n_iw = int(10 * beta)
 iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
 G0_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
-h_imp_mat = block([[h_0_mat, V_mat     ],
+h_tot_mat = block([[h_0_mat, V_mat     ],
                    [V_mat.H, h_bath_mat]])
 for bl, iw in product(spin_names, iw_mesh):
-    G0_iw[bl][iw] = inv(iw.value * eye(2*n_orb) - h_imp_mat)[:n_orb, :n_orb]
+    G0_iw[bl][iw] = inv(iw.value * eye(2*n_orb) - h_tot_mat)[:n_orb, :n_orb]
 
 # ==== Hybridization Function ====
 Delta = G0_iw.copy()
