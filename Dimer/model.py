@@ -73,5 +73,5 @@ for bl, iw in product(spin_names, iw_mesh):
 
 # ==== Hybridization Function ====
 Delta = G0_iw.copy()
-Delta['up'] << iOmega_n - h_0_mat - G0_iw['up']
-Delta['dn'] << iOmega_n - h_0_mat - G0_iw['dn']
+Delta['up'] << iOmega_n - h_0_mat - inverse(G0_iw['up'])
+Delta['dn'] << iOmega_n - h_0_mat - inverse(G0_iw['dn'])
