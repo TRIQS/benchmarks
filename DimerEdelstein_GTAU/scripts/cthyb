@@ -1,0 +1,60 @@
+#!/usr/bin/env python
+
+import sys, os, time
+sys.path.append(os.getcwd() + "/..")
+sys.path.append(os.getcwd() + "/../../common")
+from model import *
+import numpy as np
+
+from h5 import HDFArchive
+from triqs.utility import mpi
+from triqs_cthyb import Solver, version
+
+# --------- Construct the CTHYB solver ----------
+constr_params = {
+        'beta' : beta,
+        'gf_struct' : gf_struct,
+        'n_iw' : n_iw,
+        'n_tau' : len(make_adjoint_mesh(iw_mesh))
+        }
+S = Solver(**constr_params)
+
+# --------- Initialize G0_iw ----------
+S.G0_iw << G0_iw
+
+# --------- Solve! ----------
+solve_params = {
+        'h_int' : h_int,
+        'n_warmup_cycles' : 10000,
+        'n_cycles' : 1000000,
+        'length_cycle' : 100,
+        'measure_pert_order' : True
+        # 'move_double' : True,
+        }
+start = time.time()
+S.solve(**solve_params)
+end = time.time()
+
+hist = S.perturbation_order_total.data
+average_k = 1.0 * np.sum(hist * np.arange(hist.shape[0])) / np.sum(hist)
+if mpi.is_master_node(): print("Average perturbation order:", average_k)
+
+# -------- Save in archive ---------
+if mpi.is_master_node():
+    with HDFArchive("../results/cthyb.h5",'w') as results:
+        results["G"] = S.G_tau
+
+        import inspect
+        import __main__
+        results.create_group("Solver_Info")
+        info_grp = results["Solver_Info"]
+        info_grp["solver_name"] = "triqs_cthyb"
+        info_grp["constr_params"] = constr_params
+        info_grp["solve_params"] = solve_params
+        info_grp["solver"] = S
+        info_grp["solver_version"] = version.version
+        info_grp["solver_git_hash"] = version.triqs_cthyb_hash
+        info_grp["triqs_git_hash"] = version.triqs_hash
+        info_grp["script"] = inspect.getsource(__main__)
+        info_grp["num_threads"] = mpi.world.Get_size()
+        info_grp["run_time"] = end - start
