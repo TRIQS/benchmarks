@@ -15,16 +15,18 @@ constr_params = {
         'beta' : beta,
         'gf_struct' : gf_struct,
         'n_iw' : n_iw,
-        'n_tau' : n_tau
+        'n_tau' : n_tau,
+        'Delta_interface' : True
         }
 S = Solver(**constr_params)
 
 # --------- Initialize G0_iw ----------
-S.G0_iw << G0_iw
+S.Delta_tau << Delta_tau
 
 # --------- Solve! ----------
 solve_params = {
         'h_int' : h_int,
+        'h_loc0' : h_0,
         'n_warmup_cycles' : 10000,
         'n_cycles' : 100000,
         'length_cycle' : 100,
