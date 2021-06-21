@@ -23,9 +23,9 @@ SOC = 0.1                       # Spin-orbit coupling
 n_iw = int(10 * beta)           # The number of positive Matsubara frequencies
 n_k = 16                        # The number of k-points per dimension
 
-spin_names = ['up', 'dn']       # The spins
+block_names = ['up', 'dn']       # The spins
 orb_names = [0, 1, 2]           # The orbitals
-idx_lst = list(range(len(spin_names) * len(orb_names)))
+idx_lst = list(range(len(block_names) * len(orb_names)))
 gf_struct = [('bl', idx_lst)]
 
 TBL = tight_binding_model(lambda_soc=SOC)   # The Tight-Binding Lattice
@@ -41,8 +41,8 @@ h_0_mat = TBL._hop[(0,0,0)]
 h_0 = (c_dag_vec * h_0_mat * c_vec)[0,0]
 
 Umat, Upmat = U_matrix_kanamori(len(orb_names), U_int=U, J_hund=J)
-op_map = { (s,o): ('bl',i) for i, (s,o) in enumerate(product(spin_names, orb_names)) }
-h_int = h_int_kanamori(spin_names, orb_names, Umat, Upmat, J, off_diag=True, map_operator_structure=op_map)
+op_map = { (s,o): ('bl',i) for i, (s,o) in enumerate(product(block_names, orb_names)) }
+h_int = h_int_kanamori(block_names, orb_names, Umat, Upmat, J, off_diag=True, map_operator_structure=op_map)
 h_imp = h_0 + h_int
 
 

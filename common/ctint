@@ -50,5 +50,5 @@ if mpi.is_master_node():
         info_grp["solver_git_hash"] = version.triqs_ctint_hash
         info_grp["triqs_git_hash"] = version.triqs_hash
         info_grp["script"] = inspect.getsource(__main__)
-        info_grp["num_threads"] = mpi.world.Get_size()
+        info_grp["num_threads"] = mpi.size
         info_grp["run_time"] = end - start

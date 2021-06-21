@@ -19,8 +19,8 @@ print("Free energy ", ed.get_free_energy())
 # --------- Calculate the single-particle Green function ----------
 G_iw = G0_iw.copy()
 
-for bl, idx_lst in gf_struct:
-    for i, j in product(idx_lst, idx_lst):
+for bl, bl_size in gf_struct:
+    for i, j in product(range(bl_size), range(bl_size)):
         ed.set_g2_iwn(G_iw[bl][i,j], c(bl,i), c_dag(bl,j))
 
 # -------- Save in archive ---------

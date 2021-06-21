@@ -12,8 +12,9 @@ mu = 2.             # Chemical potential
 U = 5.              # On-site density-density interaction
 h = 0.2             # Local magnetic field
 
-spin_names = ['up', 'dn']
-orb_names  = [0]
+block_names = ['up', 'dn']
+n_orb = 1
+n_orb_bath = 0
 
 # ==== Local Hamiltonian ====
 h_0 = - mu*( n('up',0) + n('dn',0) ) - h*( n('up',0) - n('dn',0) )
@@ -27,7 +28,7 @@ h_bath, h_coup = 0, 0
 h_tot = h_imp + h_coup + h_bath
 
 # ==== Green function structure ====
-gf_struct = [ [s, orb_names] for s in spin_names ]
+gf_struct = [ (s, n_orb) for s in block_names ]
 
 # ==== Hybridization Function ====
 n_iw = int(10 * beta)

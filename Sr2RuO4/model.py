@@ -22,29 +22,28 @@ J = 0.4                         # Hunds coupling
 n_iw = int(10 * beta)           # The number of positive Matsubara frequencies
 n_k = 16                        # The number of k-points per dimension
 
-spin_names = ['up', 'dn']       # The spins
-orb_names = [0, 1, 2]           # The orbitals
+block_names = ['up', 'dn']       # The spins
+n_orb = 3
 
 TBL = tight_binding_model(lambda_soc=0.)   # The Tight-Binding Lattice
 TBL.bz = BrillouinZone(TBL.bl)
-n_orb = len(orb_names)
 
 
 # ==== Local Hamiltonian ====
-c_dag_vec = { s: matrix([[c_dag(s,o) for o in orb_names]]) for s in spin_names }
-c_vec =     { s: matrix([[c(s,o)] for o in orb_names]) for s in spin_names }
+c_dag_vec = { s: matrix([[c_dag(s,o) for o in range(n_orb)]]) for s in block_names }
+c_vec =     { s: matrix([[c(s,o)] for o in range(n_orb)]) for s in block_names }
 
 h_0_mat = TBL._hop[(0,0,0)][0:n_orb,0:n_orb]
-h_0 = sum(c_dag_vec[s] * h_0_mat * c_vec[s] for s in spin_names)[0,0]
+h_0 = sum(c_dag_vec[s] * h_0_mat * c_vec[s] for s in block_names)[0,0]
 
 Umat, Upmat = U_matrix_kanamori(n_orb, U_int=U, J_hund=J)
-h_int = h_int_kanamori(spin_names, orb_names, Umat, Upmat, J, off_diag=True)
+h_int = h_int_kanamori(block_names, range(n_orb), Umat, Upmat, J, off_diag=True)
 
 h_imp = h_0 + h_int
 
 
 # ==== Non-Interacting Impurity Green function  ====
-gf_struct = [(s,orb_names) for s in spin_names]
+gf_struct = [ (s,n_orb) for s in block_names ]
 
 iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
 k_mesh = MeshBrillouinZone(TBL.bz, n_k)
@@ -58,7 +57,7 @@ k_vec = array([k.value for k in k_mesh])
 e_k_vec = TBL.hopping(k_vec.T / 2. / pi).transpose(2, 0, 1)[::,0:n_orb,0:n_orb]
 mu_mat = mu * np.eye(n_orb)
 
-for s in spin_names:
+for s in block_names:
     G0_k_iw[s].data[:] = linalg.inv(iw_vec[None,...] + mu_mat[None,None,...] - e_k_vec[::,None,...])
     G0_iw[s].data[:] = np.sum(G0_k_iw[s].data[:], axis=0) / len(k_mesh)
 

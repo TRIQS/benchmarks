@@ -14,8 +14,9 @@ h = 0.2             # Local magnetic field
 E = [ 0.0, 4.0 ]    # Bath-site energies
 V = [ 2.0, 5.0 ]    # Couplings to Bath-sites
 
-spin_names = ['up', 'dn']
-orb_names  = [0]
+block_names = ['up', 'dn']
+n_orb = 1
+n_orb_bath = len(E)
 
 # ==== Local Hamiltonian ====
 h_0 = - mu*( n('up',0) + n('dn',0) ) - h*( n('up',0) - n('dn',0) )
@@ -24,16 +25,16 @@ h_imp = h_0 + h_int
 
 # ==== Bath & Coupling Hamiltonian ====
 h_bath, h_coup = 0, 0
-for i, E_i, V_i in zip([0, 1], E, V):
+for i, (E_i, V_i) in enumerate(zip(E, V)):
     for sig in ['up','dn']:
-        h_bath += E_i * n(sig,'b_' + str(i))
-        h_coup += V_i * (c_dag(sig,0) * c(sig,'b_' + str(i)) + c_dag(sig,'b_' + str(i)) * c(sig,0))
+        h_bath += E_i * n(sig,n_orb + i)
+        h_coup += V_i * (c_dag(sig,0) * c(sig,n_orb + i) + c_dag(sig,n_orb + i) * c(sig,0))
 
 # ==== Total impurity hamiltonian and fundamental operators ====
 h_tot = h_imp + h_coup + h_bath
 
 # ==== Green function structure ====
-gf_struct = [ [s, orb_names] for s in spin_names ]
+gf_struct = [ (s, n_orb) for s in block_names ]
 
 # ==== Hybridization Function ====
 n_iw = int(10 * beta)
