@@ -2,7 +2,7 @@ import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *
 
-from triqs.gf import Gf, MeshImFreq, iOmega_n, inverse, MeshBrillouinZone, MeshProduct
+from triqs.gf import Gf, MeshImFreq, iOmega_n, inverse, MeshBrZone, MeshProduct
 from triqs.lattice import BravaisLattice, BrillouinZone
 from triqs.operators import c, c_dag, n
 from triqs.operators.util import h_int_kanamori, U_matrix_kanamori
@@ -46,7 +46,7 @@ h_imp = h_0 + h_int
 gf_struct = [ (s,n_orb) for s in block_names ]
 
 iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
-k_mesh = MeshBrillouinZone(TBL.bz, n_k)
+k_mesh = MeshBrZone(TBL.bz, n_k)
 k_iw_mesh = MeshProduct(k_mesh, iw_mesh)
 
 G0_k_iw = BlockGf(mesh=k_iw_mesh, gf_struct=gf_struct)
