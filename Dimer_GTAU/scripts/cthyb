@@ -10,6 +10,8 @@ from h5 import HDFArchive
 from triqs.utility import mpi
 from triqs_cthyb import Solver, version
 
+from util import fit_G_l
+
 # --------- Construct the CTHYB solver ----------
 constr_params = {
         'beta' : beta,
@@ -41,10 +43,48 @@ hist = S.perturbation_order_total.data
 average_k = 1.0 * np.sum(hist * np.arange(hist.shape[0])) / np.sum(hist)
 if mpi.is_master_node(): print("Average perturbation order:", average_k)
 
-# -------- Save in archive ---------
+
 if mpi.is_master_node():
+
+    # ---- Calculate G_iw using Fourier Transform ----
+    
+    iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
+    
+    G_iw_tailfit = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
+    G_iw_tailfit << Fourier(S.G_tau)
+    
+    G_iw_fourier_raw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
+    G_iw_fix_discontinuity = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
+    
+    for s in block_names:
+        G_iw_fourier_raw[s] << Fourier(S.G_tau[s], make_zero_tail(S.G_tau[s]))
+    
+        km = make_zero_tail(S.G_tau[s])
+        km[1] = np.eye(S.G_tau[s].target_shape[0])
+        G_iw_fix_discontinuity[s] << Fourier(S.G_tau[s], km)
+    
+    # ---- Calculate legendre fitted G_l and associated G_iw and G_tau ----
+    
+    G_l = fit_G_l(S.G_tau)
+    
+    G_tau_legendre = BlockGf(mesh=tau_mesh, gf_struct=gf_struct)
+    G_iw_legendre = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
+    
+    G_tau_legendre << LegendreToMatsubara(G_l)
+    G_iw_legendre << LegendreToMatsubara(G_l)
+
+    # -------- Save in archive ---------
+
     with HDFArchive("../results/cthyb.h5",'w') as results:
-        results["G"] = S.G_tau
+        results["G_tau"] = S.G_tau
+        results["G_tau_leg"] = G_tau_legendre
+
+        results["G_l"] = G_l
+
+        results["G_iw_leg"] = G_iw_legendre
+        results["G_iw_tailfit"] = G_iw_tailfit
+        results["G_iw_fourier_raw"] = G_iw_fourier_raw
+        results["G_iw_fix_discontinuity"] = G_iw_fix_discontinuity
 
         import inspect
         import __main__
@@ -58,5 +98,5 @@ if mpi.is_master_node():
         info_grp["solver_git_hash"] = version.triqs_cthyb_hash
         info_grp["triqs_git_hash"] = version.triqs_hash
         info_grp["script"] = inspect.getsource(__main__)
-        info_grp["num_threads"] = mpi.world.Get_size()
+        info_grp["num_threads"] = mpi.size
         info_grp["run_time"] = end - start
