@@ -25,11 +25,11 @@ block_names = ['up', 'dn']
 n_orb = len(eps)
 n_orb_bath = len(eps_bath)
 
-# Non-interacting impurity hamiltonian in matrix representation
+# Non-interacting impurity Hamiltonian in matrix representation
 h_0_mat = diag(eps - mu) - matrix([[0, t],
                                    [t, 0]])
 
-# Bath hamiltonian in matrix representation
+# Bath Hamiltonian in matrix representation
 h_bath_mat = diag(eps_bath) - matrix([[0, t_bath],
                                       [t_bath, 0]])
 
@@ -48,14 +48,14 @@ h_int = h_int_kanamori(block_names, range(n_orb), Umat, Upmat, J, off_diag=True)
 
 h_imp = h_0 + h_int
 
-# ==== Bath & Coupling hamiltonian ====
+# ==== Bath & Coupling Hamiltonian ====
 c_dag_bath_vec = { s: matrix([[c_dag(s, o) for o in range(n_orb, n_orb + n_orb_bath)]]) for s in block_names }
 c_bath_vec =     { s: matrix([[c(s, o)] for o in range(n_orb, n_orb + n_orb_bath)]) for s in block_names }
 
 h_bath = sum(c_dag_bath_vec[s] * h_bath_mat * c_bath_vec[s] for s in block_names)[0,0]
-h_coup = sum(c_dag_vec[s] * V_mat * c_bath_vec[s] + c_dag_bath_vec[s] * V_mat * c_vec[s] for s in block_names)[0,0] # FIXME Adjoint
+h_coup = sum(c_dag_vec[s] * V_mat * c_bath_vec[s] + c_dag_bath_vec[s] * V_mat.H * c_vec[s] for s in block_names)[0,0]
 
-# ==== Total impurity hamiltonian ====
+# ==== Total impurity Hamiltonian ====
 h_tot = h_imp + h_coup + h_bath
 
 # ==== Green function structure ====
