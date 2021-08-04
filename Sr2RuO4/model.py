@@ -54,7 +54,7 @@ G0_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
 
 iw_vec = array([iw.value * np.eye(n_orb) for iw in iw_mesh])
 k_vec = array([k.value for k in k_mesh])
-e_k_vec = TBL.hopping(k_vec.T / 2. / pi).transpose(2, 0, 1)[::,0:n_orb,0:n_orb]
+e_k_vec = TBL.hopping(k_vec.T.copy() / 2. / pi).transpose(2, 0, 1)[::,0:n_orb,0:n_orb]
 mu_mat = mu * np.eye(n_orb)
 
 for s in block_names:
