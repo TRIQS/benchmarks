@@ -33,7 +33,7 @@ TBL.bz = BrillouinZone(TBL.bl)
 c_dag_vec = { s: matrix([[c_dag(s,o) for o in range(n_orb)]]) for s in block_names }
 c_vec =     { s: matrix([[c(s,o)] for o in range(n_orb)]) for s in block_names }
 
-h_0_mat = TBL._hop[(0,0,0)][0:n_orb,0:n_orb]
+h_0_mat = TBL.hoppings[(0,0,0)][0:n_orb,0:n_orb]
 h_0 = sum(c_dag_vec[s] * h_0_mat * c_vec[s] for s in block_names)[0,0]
 
 Umat, Upmat = U_matrix_kanamori(n_orb, U_int=U, J_hund=J)
@@ -53,12 +53,11 @@ G0_k_iw = BlockGf(mesh=k_iw_mesh, gf_struct=gf_struct)
 G0_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
 
 iw_vec = array([iw.value * np.eye(n_orb) for iw in iw_mesh])
-k_vec = array([k.value for k in k_mesh])
-e_k_vec = TBL.hopping(k_vec.T.copy() / 2. / pi).transpose(2, 0, 1)[::,0:n_orb,0:n_orb]
+e_k = TBL.fourier(k_mesh)[0:n_orb,0:n_orb]
 mu_mat = mu * np.eye(n_orb)
 
 for s in block_names:
-    G0_k_iw[s].data[:] = linalg.inv(iw_vec[None,...] + mu_mat[None,None,...] - e_k_vec[::,None,...])
+    G0_k_iw[s].data[:] = linalg.inv(iw_vec[None,...] + mu_mat[None,None,...] - e_k.data[::,None,...])
     G0_iw[s].data[:] = np.sum(G0_k_iw[s].data[:], axis=0) / len(k_mesh)
 
 
