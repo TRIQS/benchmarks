@@ -7,7 +7,7 @@ import numpy as np
 
 # ----------------------------------------------------------------------
 
-from triqs.lattice.tight_binding import TBLattice, energies_on_bz_path
+from triqs.lattice.tight_binding import TBLattice
 from triqs.lattice.utils import parse_hopping_from_wannier90_hr_dat
 from triqs.lattice.utils import parse_lattice_vectors_from_wannier90_wout
 
