@@ -37,7 +37,7 @@ h_0_mat = TBL.hoppings[(0,0,0)][0:n_orb,0:n_orb]
 h_0 = sum(c_dag_vec[s] * h_0_mat * c_vec[s] for s in block_names)[0,0]
 
 Umat, Upmat = U_matrix_kanamori(n_orb, U_int=U, J_hund=J)
-h_int = h_int_kanamori(block_names, range(n_orb), Umat, Upmat, J, off_diag=True)
+h_int = h_int_kanamori(block_names, n_orb, Umat, Upmat, J, off_diag=True)
 
 h_imp = h_0 + h_int
 
