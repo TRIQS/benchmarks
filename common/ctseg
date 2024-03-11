@@ -72,7 +72,7 @@ if mpi.is_master_node():
         G_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
         for bl, idx_lst in gf_struct:
             tail = make_zero_tail(G_iw[bl], 3)
-            tail[1] = np.eye(len(idx_lst))
+            tail[1] = np.eye(idx_lst)
             G_iw[bl] << Fourier(S.G_tau[bl], tail)
         results["G"] = G_iw
 
@@ -85,7 +85,7 @@ if mpi.is_master_node():
         info_grp["solve_params"] = solve_params
         # info_grp["solver"] = S
         info_grp["solver_version"] = version.version
-        info_grp["solver_git_hash"] = version.ctseg_hash
+        info_grp["solver_git_hash"] = version.triqs_ctseg_hash
         info_grp["triqs_git_hash"] = version.triqs_hash
         info_grp["script"] = inspect.getsource(__main__)
         info_grp["num_threads"] = mpi.size
