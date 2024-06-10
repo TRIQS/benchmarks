@@ -7,10 +7,11 @@ from triqs.lattice import BravaisLattice, BrillouinZone
 from triqs.operators import c, c_dag, n
 from triqs.operators.util import h_int_kanamori, U_matrix_kanamori
 from itertools import product
+#import numpy as np
 from numpy import matrix, array, diag, pi
 import numpy.linalg as linalg
 
-from tight_binding_model import *
+from triqs.lattice.utils import TB_from_wannier90
 
 # ==== System Parameters ====
 beta = 25.                     # Inverse temperature
@@ -25,7 +26,12 @@ n_k = 16                        # The number of k-points per dimension
 block_names = ['up', 'dn']       # The spins
 n_orb = 3
 
-TBL = tight_binding_model(lambda_soc=0.)   # The Tight-Binding Lattice
+paths = [os.getcwd(), os.path.dirname(__file__)]
+for p in paths:
+    if os.path.isfile(p + '/w2w_hr.dat'):
+        path = p
+        break
+TBL = TB_from_wannier90(seed='/w2w', path=path)
 TBL.bz = BrillouinZone(TBL.bl)
 
 
