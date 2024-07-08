@@ -1,0 +1,166 @@
+#!/usr/bin/env python
+
+import sys
+import os
+import time
+from itertools import product
+from triqs.plot.mpl_interface import plt, oplot
+
+sys.path.append(os.getcwd() + '/..')
+sys.path.append(os.getcwd() + '/../../common')
+from model import *
+
+import numpy as np
+
+from h5 import HDFArchive
+from triqs.gf import fit_hermitian_tail, Fourier
+from triqs.utility import mpi
+from triqs.version import git_hash as triqs_git_hash
+
+
+import forktps as ftps
+from forktps.version import forktps_hash, version
+from forktps.DiscreteBath import DiscretizeBath, TimeStepEstimation
+from forktps.BathFitting import BathFitter
+from forktps.Helpers import MakeGFstruct
+from forktps.DiscreteBath import SigmaDyson
+
+
+# helper functions
+def make_positive_definite(G):
+    # ensure that Delta is positive definite
+    for name, gf in G:
+        for orb, w in product(range(gf.target_shape[0]), gf.mesh):
+            if gf[orb, orb][w].imag > 0.0:
+                gf[orb, orb][w] = gf[orb, orb][w].real + 0.0j
+    return G
+
+
+# symmetrization of reduced solver G
+def symmetrize(G):
+    G['dn'] << G['up']
+    return G
+
+# parameters
+dt = 0.1
+eta = 0.2
+# small bath fit weights are ignored
+ignore_weight = 0.1
+# where the MPS states are stored, fast r/w important
+state_storage = '/tmp/'
+calc_me = [['up', 0]]
+# time evo bond dim and cutoff
+tw = 1e-10
+maxmI = 200
+maxmIB = 200
+maxmB = 200
+# DMRG paramaters
+dmrg_tw = 1e-13
+sweeps = 12
+dmrg_maxmI = 200
+dmrg_maxmIB = 200
+dmrg_maxmB = 200
+
+# create solver
+S = ftps.Solver(gf_struct=gf_struct, nw=len(w_mesh), wmin=w_mesh.w_min, wmax=w_mesh.w_max)
+
+# create partSector params
+sector_params = ftps.solver.DMRGParams(maxmI=50, maxmIB=50, maxmB=50, tw=1e-10, nmax=5, sweeps=5)
+
+# create DMRG params
+dmrg_params = ftps.solver.DMRGParams(
+    maxmI=dmrg_maxmI,
+    maxmIB=dmrg_maxmIB,
+    maxmB=dmrg_maxmB,
+    tw=dmrg_tw,
+    prep_imagTevo=True,
+    prep_method='TEBD',
+    sweeps=sweeps,
+    nmax=2,
+    prep_time_steps=5,
+    napph=2,
+)
+
+# create TEVO params
+tevo_params = ftps.solver.TevoParams(
+    dt=dt,
+    time_steps=1,  # dummy, will be updated during the run
+    maxmI=maxmI,
+    maxmIB=maxmIB,
+    maxmB=maxmB,
+    tw=tw,
+)
+
+# create h_loc solver object
+h_loc = ftps.solver_core.Hloc(MakeGFstruct(Delta_w), SO=False)
+
+# create FTPS Hint
+h_int_ftps = ftps.solver_core.HInt(u=U, j=0, up=0, dd=False)
+
+# ensure that Delta is positive definite
+Delta_w = make_positive_definite(Delta_w)
+
+# discretizebath
+fitter = BathFitter(Nb=None)
+Delta_discrete = fitter.FitBath(Delta=Delta_w, eta=eta, ignoreWeight=ignore_weight)
+S.b = Delta_discrete
+
+# calculate time_steps
+time_steps = TimeStepEstimation(S.b, eta=eta, dt=dt)
+mpi.report('TimeStepEstimation returned {} with given bath, "eta" = {} and "dt" = {}'.format(time_steps, eta, dt))
+
+# need to update tevo_params and G_time
+tevo_params.time_steps = time_steps
+
+# fill Hloc FTPS object
+# get hloc_dft from effective atomic levels
+for name, gf in Delta_w:
+    h_loc.Fill(name, h_0_mat - mu_mat - dc_mat)
+
+# fill solver h_loc
+S.e0 = h_loc
+
+start = time.time()
+S.solve(
+    h_int=h_int_ftps,
+    params_GS=dmrg_params,
+    params_partSector=sector_params,
+    tevo=tevo_params,
+    eta=eta,
+    calc_me=calc_me,
+    GFs=['S'],
+    state_storage=state_storage,
+)
+end = time.time()
+
+G_w = symmetrize(S.G_w)
+G_w = make_positive_definite(G_w)
+
+# calculate Sigma_freq via Dyson
+# do not use Dyson equation directly, as G0 might have wrong eta
+Sigma_w = SigmaDyson(Gret=S.G_ret, bath=S.b, hloc=S.e0, mesh=Delta_w.mesh, eta=eta, symmG=symmetrize)
+
+# -------- Save in archive ---------
+if mpi.is_master_node():
+    with HDFArchive('../results/forktps.h5', 'w') as results:
+        results['G'] = S.G_w
+        # results["Gsym"] = G_w
+        results['Gtime'] = S.G_ret
+        results['Sigma'] = Sigma_w
+
+        import inspect
+        import __main__
+
+        results.create_group('Solver_Info')
+        info_grp = results['Solver_Info']
+        info_grp['solver_name'] = 'triqs_forktps'
+        info_grp['sector_params'] = sector_params
+        info_grp['dmrg_params'] = dmrg_params
+        info_grp['tevo_params'] = tevo_params
+        info_grp['solver'] = S
+        info_grp['solver_version'] = version
+        info_grp['solver_git_hash'] = forktps_hash
+        info_grp['triqs_git_hash'] = triqs_git_hash
+        info_grp['script'] = inspect.getsource(__main__)
+        info_grp['num_threads'] = mpi.size
+        info_grp['run_time'] = end - start
