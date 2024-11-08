@@ -28,14 +28,14 @@ gf_struct = [ (s, n_orb) for s in block_names ]
 # ==== Hybridization Function ====
 n_iw = int(10 * beta)
 iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
-Delta = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
-Delta << 0.;
+Delta_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
+Delta_iw << 0.;
 
-for iw in Delta['up'].mesh:
-    Delta['up'][iw] = -1j * Gamma * sign(iw.imag)
-    Delta['dn'][iw] = -1j * Gamma * sign(iw.imag)
+for iw in Delta_iw['up'].mesh:
+    Delta_iw['up'][iw] = -1j * Gamma * sign(iw.imag)
+    Delta_iw['dn'][iw] = -1j * Gamma * sign(iw.imag)
 
 # ==== Non-Interacting Impurity Green function  ====
 G0_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
-G0_iw['up'] << inverse(iOmega_n + mu + h - Delta['up'])
-G0_iw['dn'] << inverse(iOmega_n + mu - h - Delta['dn'])
+G0_iw['up'] << inverse(iOmega_n + mu + h - Delta_iw['up'])
+G0_iw['dn'] << inverse(iOmega_n + mu - h - Delta_iw['dn'])
