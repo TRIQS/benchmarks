@@ -74,6 +74,6 @@ for bl, iw in product(block_names, iw_mesh):
     G0_iw[bl][iw] = inv(iw.value * eye(2*n_orb) - h_tot_mat)[:n_orb, :n_orb]
 
 # ==== Hybridization Function ====
-Delta = G0_iw.copy()
-Delta['up'] << iOmega_n - h_0_mat - inverse(G0_iw['up'])
-Delta['dn'] << iOmega_n - h_0_mat - inverse(G0_iw['dn'])
+Delta_iw = G0_iw.copy()
+Delta_iw['up'] << iOmega_n - h_0_mat - inverse(G0_iw['up'])
+Delta_iw['dn'] << iOmega_n - h_0_mat - inverse(G0_iw['dn'])

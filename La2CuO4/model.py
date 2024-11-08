@@ -79,9 +79,9 @@ for s in block_names:
 
 
 # ==== Hybridization Function ====
-Delta = G0_iw.copy()
-Delta['up'] << iOmega_n + mu_mat - h_0_mat - inverse(G0_iw['up'])
-Delta['dn'] << iOmega_n + mu_mat - h_0_mat - inverse(G0_iw['dn'])
+Delta_iw = G0_iw.copy()
+Delta_iw['up'] << iOmega_n + mu_mat - h_0_mat - inverse(G0_iw['up'])
+Delta_iw['dn'] << iOmega_n + mu_mat - h_0_mat - inverse(G0_iw['dn'])
 
 # ReFreq Delta
 Delta_w = G0_w.copy()

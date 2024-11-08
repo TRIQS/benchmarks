@@ -64,5 +64,5 @@ G0_iw['bl'].data[:] = np.sum(G0_k_iw['bl'].data[:], axis=0) / len(k_mesh)
 
 
 # ==== Hybridization Function ====
-Delta = G0_iw.copy()
-Delta['bl'] << iOmega_n + mu_mat - h_0_mat - inverse(G0_iw['bl'])
+Delta_iw = G0_iw.copy()
+Delta_iw['bl'] << iOmega_n + mu_mat - h_0_mat - inverse(G0_iw['bl'])

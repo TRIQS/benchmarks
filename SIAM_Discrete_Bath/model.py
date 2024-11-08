@@ -39,10 +39,10 @@ gf_struct = [ (s, n_orb) for s in block_names ]
 # ==== Hybridization Function ====
 n_iw = int(10 * beta)
 iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
-Delta = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
-Delta << sum([V_i*V_i * inverse(iOmega_n - E_i) for V_i,E_i in zip(V, E)]);
+Delta_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
+Delta_iw << sum([V_i*V_i * inverse(iOmega_n - E_i) for V_i,E_i in zip(V, E)]);
 
 # ==== Non-Interacting Impurity Green function  ====
 G0_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
-G0_iw['up'] << inverse(iOmega_n + mu + h - Delta['up'])
-G0_iw['dn'] << inverse(iOmega_n + mu - h - Delta['dn'])
+G0_iw['up'] << inverse(iOmega_n + mu + h - Delta_iw['up'])
+G0_iw['dn'] << inverse(iOmega_n + mu - h - Delta_iw['dn'])
