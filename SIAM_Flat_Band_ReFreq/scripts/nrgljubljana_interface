@@ -1,0 +1,71 @@
+#!/usr/bin/env python
+
+import sys, os, time
+sys.path.append(os.getcwd() + "/..")
+sys.path.append(os.getcwd() + "/../../common")
+from model import *
+
+from h5 import HDFArchive
+from triqs.utility import mpi
+import triqs.version as triqs_info
+from nrgljubljana_interface import Solver
+
+# --------- Construct the nrgljubljana_interface solver  ----------
+templatedir = "/mnt/home/drolih/sources/TRIQS/nrgljubljana_interface/templates/"
+constr_params = {
+        'templatedir' : templatedir,
+        'model' : model,
+        'symtype' : symtype,
+        'mesh_max' : mesh_max,
+        'mesh_min' : mesh_min,
+        'mesh_ratio' : mesh_ratio,
+        }
+S = Solver(**constr_params)
+# --------- Initialize Delta_w ----------
+S.Delta_w << Delta_w
+
+# --------- Solve! ----------
+solve_params = {
+        'T' : T,
+        'Lambda' : 1.7,
+        'Nz' : 2,
+        'Tmin' : 1e-14,
+        'keep' : 5000,
+        'bandrescale' : 1.0,
+        'alpha': 0.3,
+        'gamma': 0.2,
+        }
+
+mp = { 'U1': U }
+solve_params['model_parameters'] = mp
+
+start = time.time()
+S.solve(**solve_params)
+end = time.time()
+
+# -------- Save in archive ---------
+if mpi.is_master_node():
+    with HDFArchive("../results/nrgljubljana_interface.h5",'w') as results:
+        results["A_w"] = S.A_w
+        results["G_w"] = S.G_w
+        results["F_l_w"] = S.F_l_w
+        results["F_r_w"] = S.F_r_w
+        results["I_w"] = S.I_w
+        results["Sigma_w"] = S.Sigma_w
+        results["Delta_w"] = S.Delta_w
+        results["expv"] = S.expv
+        results["tdfdm"] = S.tdfdm
+
+        import inspect
+        import __main__
+        results.create_group("Solver_Info")
+        info_grp = results["Solver_Info"]
+        info_grp["solver_name"] = "nrgljubljana_interface"
+        info_grp["constr_params"] = constr_params
+        info_grp["solve_params"] = solve_params
+        info_grp["solver"] = S
+        info_grp["triqs_version"] = triqs_info.version
+        info_grp["triqs_git_hash"] = triqs_info.git_hash
+        info_grp["script"] = inspect.getsource(__main__)
+        info_grp["num_threads"] = mpi.size
+        info_grp["run_time"] = end - start
