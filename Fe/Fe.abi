@@ -1,0 +1,102 @@
+##############################################################
+######       This is an ABINIT input for BCC iron       ######
+###### It only works with a developer's version for now ######
+######          It will be available in v10.6           ######
+##############################################################
+
+# Multi_dataset parameters
+ndtset 2       # Two datasets
+jdtset 1 2     # First one is DFT, second one is DFT+DMFT
+getden -1      # DFT+DMFT restarts from DFT density
+
+############################
+# Structural Parameters
+############################
+
+# Definition of unit cell
+
+acell 3*5.44761       # Lattice parameter
+rprim -0.5  0.5  0.5  # Primitive cell of BCC lattice
+       0.5 -0.5  0.5
+       0.5  0.5 -0.5
+
+# Definition of atoms
+ntypat 1   # Only one type of atom
+znucl 26   # Atomic number of Fe
+
+natom 1           # Only one atom
+typat 1           # Type of atom
+xred 0.0 0.0 0.0  # Atom at the center of the unit cell
+
+# Definition of pseudopotentials
+pp_dirpath "$ABI_PSPDIR"            # Repository with pseudopotentials
+pseudos "26fe.lda2.paw"             # LDA pseudopotential
+
+# Definition of the reciprocal grid
+kptopt 1                  # Take into account every symmetry
+ngkpt 14 14 14            # Size of the Monkhorst-Pack grid
+nshiftk 2                 # Recommended shifts for BCC
+shiftk 0.25  0.25  0.25
+      -0.25 -0.25 -0.25
+
+############################
+# Energy Parameters
+############################
+
+ecut 24         # Maximal plane-wave kinetic energy cut-off, in Hartree
+pawecutdg 50    # PAW: Energy Cutoff for the Double Grid
+nband 20        # Number of bands
+occopt 3        # Smearing type: simple Fermi-Dirac scheme
+tsmear 300 K    # Electronic smearing temperature
+
+############################
+# DFT Calculation
+############################
+
+usedmft1 0       # DFT alone
+nstep1 100       # Maximal number of iterations for the DFT convergence
+tolvrs 1.0d-18   # Tolerance of the density for DFT convergence
+
+# Definition of the spin properties
+nsppol 2     # Spin-polarized
+nspden 2
+
+############################
+# DMFT Calculation
+############################
+
+usedmft2 1        # DMFT calculation
+nstep2    100     # Maximal number of iterations for the DFT+DMFT convergence
+nline2    15      # Number of line minimisations
+nnsclo2   10      # Number of non-self consistent loops
+
+# Definition for DMFT loop
+dmftbandi 5             # First KS band included in the projection for Wannier orbitals
+dmftbandf 13            # Last KS band included in the projection for Wannier orbitals
+dmft_nwli 5000          # Number of Matsubara frequencies
+dmft_iter 1             # Number of DMFT loops
+dmft_mxsf 0.8           # Mixing of the old and new self-energy at every iterations.
+dmft_dc   6             # Double counting type. 6 is non-magnetic AMF.
+
+# Definition of impurity solver
+dmft_solv                7   # TRIQS/CTHYB with full Slater Hamiltonian
+dmftqmc_l             4000   # Number of time slices for G(tau) and Delta(tau)
+dmftqmc_n             1.d6   # Number of QMC measurements (n_cycles) summed over all CPUs
+dmftqmc_therm          100   # Nb of thermalization cycles at the first iteration
+dmftctqmc_meas        1000   # Nb of sweeps between each measurement (length_cycle)
+dmftctqmc_basis          0   # Cubic basis in order not to have off-diagonal elements
+dmft_triqs_off_diag      0   # Only take into account the diagonal elements
+dmft_triqs_wmax        1.0   # DLR frequencies in [-wmax,wmax]
+dmft_shiftself       1.d-1   # Initial static shift between spin channels of self-energy to start in a magnetic state
+dmft_triqs_therm_restart 1   # Nb of thermalization cycles when restarting from the previous iteration
+
+# Definition of correlations
+usepawu1    4           #
+usepawu2    14          # Non-magnetic DFT, magnetism only arises from DMFT
+dmatpuopt   2           #
+lpawu       2           # Angular momentum: apply DMFT on all d orbitals
+upawu1      0.00 eV
+upawu2      5.5  eV  # Values of U (same as K. Haule)
+jpawu1      0.00 eV
+jpawu2      0.84 eV  # Values of J (same as K. Haule)
+
