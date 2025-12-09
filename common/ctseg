@@ -4,10 +4,12 @@ import sys, os, time
 sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
 from model import *
+
 import numpy as np
 from numpy import linalg
 
 from h5 import HDFArchive
+from triqs.gf import fit_hermitian_tail, Fourier, make_zero_tail
 from triqs.utility import mpi
 from triqs_ctseg import Solver, version
 
@@ -15,7 +17,6 @@ from triqs_ctseg import Solver, version
 constr_params = {
         'beta' : beta,
         'gf_struct' : gf_struct,
-        'n_iw' : n_iw,
         'n_tau' : 10001
         }
 S = Solver(**constr_params)
@@ -38,42 +39,47 @@ def get_h0_Delta(G_iw):
 # Get the rotations to the eigenbasis for each block of G0_iw
 h0, Delta_iw = get_h0_Delta(G0_iw)
 rot_lst = [np.matrix(linalg.eig(h0_bl)[1]) for h0_bl in h0]
+# Compute chemical potential
 
-# Rotate G0_iw
-for (bl, g0_bl), rot_bl in zip(G0_iw, rot_lst):
+h0_bl = {}
+for i, s in enumerate(block_names):
+    h0_bl[s] = np.diag(linalg.eig(h0[i])[0].real)
+
+h_loc0 = sum(c_dag_vec[s] * h0_bl[s] * c_vec[s] for s in block_names)[0,0]
+
+# Rotate Delta_iw
+for (bl, g0_bl), rot_bl in zip(Delta_iw, rot_lst):
     g0_bl << rot_bl.H * g0_bl * rot_bl
 
 # --------- Initialize G0_iw ----------
-S.G0_iw << G0_iw
+S.Delta_tau << Fourier(Delta_iw)
+S.Delta_tau << S.Delta_tau.real
 
 # --------- Solve! ----------
 solve_params = {
         'h_int' : h_int,
         'n_warmup_cycles' : 10000,
         'n_cycles' : 1000000,
-        'length_cycle' : 100
+        'length_cycle' : 100,
+        "h_loc0": h_loc0
         }
 start = time.time()
 S.solve(**solve_params)
 end = time.time()
 
-print("Average sign: ", S.average_sign)
-
-# Rotate back G0_iw and G_tau
-for (bl, g0_bl), rot_bl in zip(S.G0_iw, rot_lst):
-    g0_bl << rot_bl * g0_bl * rot_bl.H
-for (bl, g_bl), rot_bl in zip(S.G_tau, rot_lst):
+# Rotate back G_tau
+for (bl, g_bl), rot_bl in zip(S.results.G_tau, rot_lst):
     g_bl << rot_bl * g_bl * rot_bl.H
 
 
 # -------- Save in archive ---------
 if mpi.is_master_node():
-    with HDFArchive("../results/ctseg.h5",'w') as results:
+    with HDFArchive("../results/ctseg_new.h5",'w') as results:
         G_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
-        for bl, idx_lst in gf_struct:
-            tail = make_zero_tail(G_iw[bl], 3)
-            tail[1] = np.eye(idx_lst)
-            G_iw[bl] << Fourier(S.G_tau[bl], tail)
+        for bl, l in gf_struct:
+            tail = make_zero_tail(G_iw[bl], 2)
+            tail[1] = np.eye(l)
+            G_iw[bl] << Fourier(S.results.G_tau[bl], tail)
         results["G"] = G_iw
 
         import inspect
