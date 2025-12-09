@@ -7,6 +7,7 @@ from triqs.lattice import BravaisLattice, BrillouinZone
 from triqs.operators import c, c_dag, n
 from triqs.operators.util import h_int_kanamori, U_matrix_kanamori
 from itertools import product
+import numpy as np
 from numpy import matrix, array, diag, pi
 import numpy.linalg as linalg
 
