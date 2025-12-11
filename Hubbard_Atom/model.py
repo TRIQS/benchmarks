@@ -7,10 +7,11 @@ from triqs.operators import c, c_dag, n
 from itertools import product
 
 # ==== System Parameters ====
-beta = 5.           # Inverse temperature
-mu = 2.             # Chemical potential
-U = 5.              # On-site density-density interaction
-h = 0.2             # Local magnetic field
+# Parameters from arXiv:2405.06716 (half-filled Hubbard atom)
+U = 2.              # On-site density-density interaction
+beta = 10.          # Inverse temperature
+mu = U / 2.         # Chemical potential (half-filling condition)
+h = 0.              # No magnetic field
 
 block_names = ['up', 'dn']
 n_orb = 1
