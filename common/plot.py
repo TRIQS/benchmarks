@@ -25,7 +25,7 @@ for solver in solver_lst:
 block_lst = list(G[solver_lst[0]].indices)
 n_blocks = len(block_lst)
 
-for g, name in [[G, 'G'], [Sigma, '$\Sigma$']]:
+for g, name in [[G, 'G'], [Sigma, r'$\Sigma$']]:
 
     plt.subplots(n_blocks,1,figsize=(10,6*n_blocks))
 
@@ -35,8 +35,8 @@ for g, name in [[G, 'G'], [Sigma, '$\Sigma$']]:
         for solver in solver_lst:
             marker = marker_lst[solver_lst.index(solver)]
             oplot(g[solver][block][0,0], marker, name = name + "[0,0]_%s" % solver)
-        plt.xlabel("$\omega_n$")
-        plt.ylabel(name + "[" + block + "]$(i\omega_n)$")
+        plt.xlabel(r"$\omega_n$")
+        plt.ylabel(name + "[" + block + r"]$(i\omega_n)$")
 
     plt.tight_layout()
     plt.show()
