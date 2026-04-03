@@ -2,7 +2,7 @@ import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *
 
-from triqs.gf import Gf, MeshImFreq, BlockGf, iOmega_n, inverse
+from triqs.gf import Gf, MeshImFreq, MeshDLRImFreq, BlockGf, iOmega_n, inverse
 from triqs.operators import c, c_dag, n
 from numpy import array, matrix
 
@@ -13,6 +13,7 @@ t = 1.0                         # Hopping
 mu = U / 2                      # Chemical potential (half-filling)
 
 n_orb = 4                       # 4 sites in 2x2 plaquette
+n_orb_bath = 0
 n_iw = int(10 * beta)           # Matsubara frequencies
 
 block_names = ['up', 'dn']
@@ -38,15 +39,26 @@ h_0 = sum(c_dag_vec[s] * h_0_mat * c_vec[s] for s in block_names)[0, 0]
 
 h_imp = h_0 + h_int
 
+# ==== Total Hamiltonian (isolated cluster, no bath) ====
+h_tot = h_imp
+
 # ==== Green function structure ====
 gf_struct = [(s, n_orb) for s in block_names]
 
-# ==== Non-Interacting Green function ====
+# ==== Frequency Meshes ====
 iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
-G0_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
-for bl, g_bl in G0_iw:
-    g_bl << inverse(iOmega_n - h_0_mat)
+dlr_wmax = 2*U
+dlr_eps = 1e-10
+dlr_iw_mesh = MeshDLRImFreq(beta, 'Fermion', dlr_wmax, dlr_eps, True)
 
-# ==== Hybridization Function (zero for isolated cluster) ====
-Delta_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
-Delta_iw << 0.0
+# ==== Non-Interacting Green function and Hybridization (zero for isolated cluster) ====
+def make_gf(mesh):
+    G0 = BlockGf(mesh=mesh, gf_struct=gf_struct)
+    for bl, g_bl in G0:
+        g_bl << inverse(iOmega_n - h_0_mat)
+    Delta = BlockGf(mesh=mesh, gf_struct=gf_struct)
+    Delta << 0.0
+    return G0, Delta
+
+G0_iw, Delta_iw = make_gf(iw_mesh)
+G0_dlr_iw, Delta_dlr = make_gf(dlr_iw_mesh)
