@@ -13,25 +13,24 @@ from triqs_ctint import Solver, version
 constr_params = {
         'beta' : beta,
         'gf_struct' : gf_struct,
-        'n_iw' : n_iw,
+        'dlr_wmax' : dlr_wmax,
+        'dlr_eps' : dlr_eps,
         'n_tau' : 10001
         }
 S = Solver(**constr_params)
 
 # --------- Initialize G0_iw ----------
-S.G0_iw << G0_iw
+S.G0_iw << G0_dlr_iw
 
 # --------- Solve! ----------
 solve_params = {
         'h_int' : h_int,
         'n_warmup_cycles' : 10000,
-        'n_cycles' : 1000000,
+        'n_cycles' : 10000,
         'length_cycle' : 100,
+        'measure_M_iw' : True,
         'measure_M3pp_iw' : True,
-        'measure_M3ph_iw' : True,
-        'n_iw_M3' : n_iw,
-        'n_iW_M3' : n_iw,
-        'n_tau_M3' : 10*n_iw+1 # Careful -> Discretization error
+        'measure_M3ph_iw' : True
         }
 start = time.time()
 S.solve(**solve_params)
@@ -42,6 +41,7 @@ if mpi.is_master_node():
     with HDFArchive("../results/ctint_nfft.h5",'w') as results:
         results["G"] = S.G_iw
 
+        # Store DLR2D compressed representation
         results["chi3pp_iw"] = S.chi3pp_iw_nfft
         results["chi3ph_iw"] = S.chi3ph_iw_nfft
 

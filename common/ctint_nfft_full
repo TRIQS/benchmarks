@@ -14,6 +14,7 @@ constr_params = {
         'beta' : beta,
         'gf_struct' : gf_struct,
         'dlr_wmax' : dlr_wmax,
+        'dlr_eps' : dlr_eps,
         'n_tau' : 10001
         }
 S = Solver(**constr_params)
@@ -25,25 +26,26 @@ S.G0_iw << G0_dlr_iw
 solve_params = {
         'h_int' : h_int,
         'n_warmup_cycles' : 10000,
-        'n_cycles' : 1000000,
+        'n_cycles' : 10000,
         'length_cycle' : 100,
-        'measure_M3pp_tau' : True,
-        'measure_M3ph_tau' : True,
+        'measure_M_iw' : True,
+        'measure_M3pp_iw_full' : True,
+        'measure_M3ph_iw_full' : True,
         'n_iw_M3' : n_iw,
-        'n_iW_M3' : n_iw,
-        'n_tau_M3' : 10*n_iw+1 # Careful -> Discretization error
+        'n_iW_M3' : n_iw
         }
-
 start = time.time()
 S.solve(**solve_params)
 end = time.time()
 
 # -------- Save in archive ---------
 if mpi.is_master_node():
-    with HDFArchive("../results/ctint.h5",'w') as results:
+    with HDFArchive("../results/ctint_nfft_full.h5",'w') as results:
         results["G"] = S.G_iw
-        results["chi3pp_iw"] = S.chi3pp_iw
-        results["chi3ph_iw"] = S.chi3ph_iw
+
+        # Store DLR2D compressed representation
+        results["chi3pp_iw"] = S.chi3pp_iw_nfft_full
+        results["chi3ph_iw"] = S.chi3ph_iw_nfft_full
 
         import inspect
         import __main__
