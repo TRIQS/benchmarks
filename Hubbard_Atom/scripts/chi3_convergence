@@ -1,0 +1,347 @@
+#!/usr/bin/env python
+"""Convergence study of chi3 from MC with exact analytic results for half-filled Hubbard atom.
+
+Takes multiple data files and plots l^2 and l^infinity errors as a function of 
+num_threads * n_cycles (total samples).
+
+Computes chi3 in singlet (s), density (d), and magnetic (m) channels:
+- chi_s = 2 * chi_pp['up', 'dn']           (singlet pairing)
+- chi_d = chi_ph['up', 'up'] + chi_ph['up', 'dn']  (density)
+- chi_m = chi_ph['up', 'up'] - chi_ph['up', 'dn']  (magnetic)
+
+Also computes "data error" - l^infinity error of raw DLR2D data before interpolation.
+
+Exact formulas from cppdlr2d/programs/hubatom/hubatom.cpp for half-filled Hubbard atom.
+"""
+
+import sys, os
+sys.path.append(os.getcwd() + "/..")
+sys.path.append(os.getcwd() + "/../../common")
+from model import *
+
+import numpy as np
+import matplotlib.pyplot as plt
+from h5 import HDFArchive
+from triqs.gf import MeshProduct, MeshImFreq, make_gf_imfreq, make_gf_dlr2d
+
+
+# ==== Data files to process ====
+# Modify this list to include the files you want to analyze
+data_files = [
+    "../results/ctint_nfft.h5",
+]
+
+
+# ==== Exact formulas (from hubatom.cpp) ====
+
+def fermi(x):
+    """Fermi function"""
+    return 1.0 / (1.0 + np.exp(x))
+
+def g_fun(u, nu):
+    """G(iν) = 1/(iν - U²/(4iν)) for half-filled Hubbard atom"""
+    return 1.0 / (nu - u * u / (4 * nu))
+
+def chi_s_exact_func(u, beta, nu1, nu2):
+    """Exact singlet chi3, singularity at ν₁ + ν₂ = 0"""
+    val = (2 - u * u / (2 * nu1 * nu2))
+    if abs(nu1 + nu2) == 0:
+        val -= beta * u * fermi(beta * u / 2) * (1.0 - u * u / (4 * nu1 * nu1))
+    val *= g_fun(u, nu1) * g_fun(u, nu2)
+    return val
+
+def chi_ph_exact_func(u, beta, nu1, nu2, channel):
+    """Exact PH chi3 (channel=1 density, channel=-1 magnetic), singularity at ν₁ = ν₂"""
+    uu = channel * u
+    val = (2 + u * u / (2 * nu1 * nu2))
+    if abs(nu1 - nu2) == 0:
+        val -= beta * uu * fermi(beta * uu / 2) * (1.0 - u * u / (4 * nu1 * nu1))
+    val *= -g_fun(u, nu1) * g_fun(u, nu2) / 2
+    if channel == 1 and abs(nu1 - nu2) == 0:
+        val += beta * g_fun(u, nu2)
+    return val
+
+
+def compute_exact_on_mesh(iw_mesh):
+    """Compute exact s, d, m channels on given Matsubara mesh."""
+    n_pts = len(iw_mesh)
+    inu = np.array([complex(iw) for iw in iw_mesh])
+    
+    chi_s_exact = np.zeros((n_pts, n_pts), dtype=complex)
+    chi_d_exact = np.zeros((n_pts, n_pts), dtype=complex)
+    chi_m_exact = np.zeros((n_pts, n_pts), dtype=complex)
+    
+    for i, nu1 in enumerate(inu):
+        for j, nu2 in enumerate(inu):
+            chi_s_exact[i, j] = chi_s_exact_func(U, beta, nu1, nu2)
+            chi_d_exact[i, j] = chi_ph_exact_func(U, beta, nu1, nu2, channel=1)
+            chi_m_exact[i, j] = chi_ph_exact_func(U, beta, nu1, nu2, channel=-1)
+    
+    return chi_s_exact, chi_d_exact, chi_m_exact
+
+
+def compute_exact_at_dlr2d_points(dlr2d_indices):
+    """Compute exact s, d, m channels at specific DLR2D mesh points.
+    
+    Parameters
+    ----------
+    dlr2d_indices : array of shape (N, 2)
+        Array of (n1, n2) Matsubara frequency indices
+        
+    Returns
+    -------
+    chi_s_exact, chi_d_exact, chi_m_exact : arrays of shape (N,)
+    """
+    n_pts = len(dlr2d_indices)
+    chi_s_exact = np.zeros(n_pts, dtype=complex)
+    chi_d_exact = np.zeros(n_pts, dtype=complex)
+    chi_m_exact = np.zeros(n_pts, dtype=complex)
+    
+    for i, (n1, n2) in enumerate(dlr2d_indices):
+        # Convert Matsubara index n to frequency iω_n = i(2n+1)π/β
+        nu1 = 1j * (2 * n1 + 1) * np.pi / beta
+        nu2 = 1j * (2 * n2 + 1) * np.pi / beta
+        chi_s_exact[i] = chi_s_exact_func(U, beta, nu1, nu2)
+        chi_d_exact[i] = chi_ph_exact_func(U, beta, nu1, nu2, channel=1)
+        chi_m_exact[i] = chi_ph_exact_func(U, beta, nu1, nu2, channel=-1)
+    
+    return chi_s_exact, chi_d_exact, chi_m_exact
+
+
+def compute_metrics(chi_mc, chi_exact):
+    """Compute l^2 and l^infinity errors."""
+    diff = chi_mc - chi_exact
+    l2_norm_exact = np.linalg.norm(chi_exact) / beta / beta
+    l2_norm_diff = np.linalg.norm(diff) / beta / beta
+    l_inf_diff = np.max(np.abs(diff))
+    rel_l2_error = l2_norm_diff / l2_norm_exact if l2_norm_exact > 1e-14 else np.nan
+    
+    return {
+        'l2_error': l2_norm_diff,
+        'l_inf_error': l_inf_diff,
+        'rel_l2_error': rel_l2_error,
+    }
+
+
+def process_data_file(filepath, return_chi_data=False):
+    """Process a single data file and return errors.
+    
+    Parameters
+    ----------
+    filepath : str
+        Path to the HDF5 data file
+    return_chi_data : bool
+        If True, also return the chi arrays and mesh for plotting
+    
+    Returns
+    -------
+    dict with keys: total_samples, errors_full (s, d, m), errors_data (s, d, m)
+    If return_chi_data=True, also includes: chi_mc, chi_exact, iw_mesh
+    """
+    print(f"\nProcessing {filepath}...")
+    
+    with HDFArchive(filepath, 'r') as ar:
+        # Extract parameters
+        num_threads = ar['Solver_Info']['num_threads']
+        n_cycles = ar['Solver_Info']['solve_params']['n_cycles']
+        total_samples = num_threads * n_cycles
+        
+        print(f"  num_threads = {num_threads}, n_cycles = {n_cycles}, total = {total_samples}")
+        
+        # Load DLR2D data
+        chi3pp_dlr2d = ar['chi3pp_iw']
+        chi3ph_dlr2d = ar['chi3ph_iw']
+        
+        # Get DLR2D mesh indices for raw data error calculation
+        # Extract (n1, n2) Matsubara indices from mesh values
+        mesh_pp = chi3pp_dlr2d['up', 'dn'].mesh
+        mesh_ph = chi3ph_dlr2d['up', 'up'].mesh
+        dlr2d_indices_pp = np.array([(v[0].n, v[1].n) for v in mesh_pp.values()])
+        dlr2d_indices_ph = np.array([(v[0].n, v[1].n) for v in mesh_ph.values()])
+        
+        # Extract raw DLR2D data (before interpolation to full mesh)
+        chi3pp_updn_raw = chi3pp_dlr2d['up', 'dn'].data[:, 0, 0, 0, 0]
+        chi3ph_upup_raw = chi3ph_dlr2d['up', 'up'].data[:, 0, 0, 0, 0]
+        chi3ph_updn_raw = chi3ph_dlr2d['up', 'dn'].data[:, 0, 0, 0, 0]
+        
+        # Compute raw channel data (on DLR2D mesh)
+        chi_s_raw = 2 * chi3pp_updn_raw
+        chi_d_raw = chi3ph_upup_raw + chi3ph_updn_raw
+        chi_m_raw = chi3ph_upup_raw - chi3ph_updn_raw
+        
+        # Convert DLR2D to full product mesh
+        chi3pp = make_gf_imfreq(make_gf_dlr2d(chi3pp_dlr2d), n_iw)
+        chi3ph = make_gf_imfreq(make_gf_dlr2d(chi3ph_dlr2d), n_iw)
+        
+        # Extract and compute channels on full mesh
+        chi3pp_updn = chi3pp['up', 'dn'].data[:, :, 0, 0, 0, 0]
+        chi3ph_upup = chi3ph['up', 'up'].data[:, :, 0, 0, 0, 0]
+        chi3ph_updn = chi3ph['up', 'dn'].data[:, :, 0, 0, 0, 0]
+        
+        chi_s_mc = 2 * chi3pp_updn
+        chi_d_mc = chi3ph_upup + chi3ph_updn
+        chi_m_mc = chi3ph_upup - chi3ph_updn
+        
+        # Get mesh for exact calculation
+        iw_mesh = chi3pp['up', 'dn'].mesh[0]
+    
+    # Compute exact on full mesh
+    chi_s_exact, chi_d_exact, chi_m_exact = compute_exact_on_mesh(iw_mesh)
+    
+    # Compute exact at DLR2D points (for raw data error)
+    chi_s_exact_dlr2d, _, _ = compute_exact_at_dlr2d_points(dlr2d_indices_pp)
+    _, chi_d_exact_dlr2d, chi_m_exact_dlr2d = compute_exact_at_dlr2d_points(dlr2d_indices_ph)
+    
+    # Compute errors on full mesh
+    errors_full = {
+        's': compute_metrics(chi_s_mc, chi_s_exact),
+        'd': compute_metrics(chi_d_mc, chi_d_exact),
+        'm': compute_metrics(chi_m_mc, chi_m_exact),
+    }
+    
+    # Compute l^infinity errors on raw DLR2D data
+    errors_data = {
+        's': np.max(np.abs(chi_s_raw - chi_s_exact_dlr2d)),
+        'd': np.max(np.abs(chi_d_raw - chi_d_exact_dlr2d)),
+        'm': np.max(np.abs(chi_m_raw - chi_m_exact_dlr2d)),
+    }
+    
+    print(f"  Full mesh errors:")
+    for ch in ['s', 'd', 'm']:
+        print(f"    {ch}: l2={errors_full[ch]['l2_error']:.3e}, l_inf={errors_full[ch]['l_inf_error']:.3e}")
+    print(f"  Data errors (l_inf on DLR2D mesh):")
+    for ch in ['s', 'd', 'm']:
+        print(f"    {ch}: {errors_data[ch]:.3e}")
+    
+    result = {
+        'total_samples': total_samples,
+        'num_threads': num_threads,
+        'n_cycles': n_cycles,
+        'errors_full': errors_full,
+        'errors_data': errors_data,
+    }
+    
+    if return_chi_data:
+        result['chi_mc'] = {'s': chi_s_mc, 'd': chi_d_mc, 'm': chi_m_mc}
+        result['chi_exact'] = {'s': chi_s_exact, 'd': chi_d_exact, 'm': chi_m_exact}
+        result['iw_mesh'] = iw_mesh
+    
+    return result
+
+
+# ==== Main processing ====
+
+print("=" * 60)
+print("Chi3 Convergence Study")
+print("=" * 60)
+
+results = []
+for i, filepath in enumerate(data_files):
+    # Get chi data for the last file (for comparison plot)
+    is_last = (i == len(data_files) - 1)
+    result = process_data_file(filepath, return_chi_data=is_last)
+    results.append(result)
+
+# Sort by total samples
+results.sort(key=lambda x: x['total_samples'])
+
+# Get the result with highest total_samples for comparison plot
+last_result = max(results, key=lambda x: x['total_samples'])
+
+
+# ==== Generate plots ====
+
+print("\nGenerating convergence plots...")
+
+total_samples = np.array([r['total_samples'] for r in results])
+channels = ['s', 'd', 'm']
+channel_names = ['Singlet (s)', 'Density (d)', 'Magnetic (m)']
+colors = {'s': 'tab:blue', 'd': 'tab:orange', 'm': 'tab:green'}
+
+# ==== Summary plot ====
+
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+# Left: all l2 errors
+ax = axes[0]
+for ch, ch_name in zip(channels, channel_names):
+    l2_errors = [r['errors_full'][ch]['l2_error'] for r in results]
+    ax.loglog(total_samples, l2_errors, 'o-', label=ch_name, markersize=8)
+
+# Reference line
+ref_line = l2_errors[0] * np.sqrt(total_samples[0] / total_samples)
+ax.loglog(total_samples, ref_line, '--', color='gray', alpha=0.7, label=r'$1/\sqrt{N}$')
+
+ax.set_xlabel('Total samples (num_threads × n_cycles)')
+ax.set_ylabel(r'$\ell^2$ error')
+ax.set_title(r'$\ell^2$ Error Convergence (Full Mesh)')
+ax.legend()
+ax.grid(True, alpha=0.3)
+
+# Right: all l_inf errors (full and data)
+ax = axes[1]
+markers_full = ['s', '^', 'D']  # Different markers for each channel
+markers_data = ['s', '^', 'D']  # Same markers but smaller and red for data errors
+for i, (ch, ch_name) in enumerate(zip(channels, channel_names)):
+    linf_errors = [r['errors_full'][ch]['l_inf_error'] for r in results]
+    data_errors = [r['errors_data'][ch] for r in results]
+    color = plt.cm.tab10(i)
+    # Plot full mesh errors with larger markers
+    ax.loglog(total_samples, linf_errors, marker=markers_full[i], linestyle='-', 
+              color=color, label=f'{ch_name} (full)', markersize=10)
+    # Plot data errors with smaller red markers (same shape as full mesh)
+    ax.loglog(total_samples, data_errors, marker=markers_data[i], linestyle='none',
+              color='red', markersize=5, label=f'{ch_name} (data)')
+
+# Reference line
+ref_line = linf_errors[0] * np.sqrt(total_samples[0] / total_samples)
+ax.loglog(total_samples, ref_line, '--', color='gray', alpha=0.7, label=r'$1/\sqrt{N}$')
+
+ax.set_xlabel('Total samples (num_threads × n_cycles)')
+ax.set_ylabel(r'$\ell^\infty$ error')
+ax.set_title(r'$\ell^\infty$ Error Convergence')
+ax.legend(fontsize=8, ncol=2)
+ax.grid(True, alpha=0.3)
+
+plt.tight_layout()
+plt.savefig('../results/chi3_convergence.pdf')
+print('Saved to ../results/chi3_convergence.pdf')
+
+
+# ==== Comparison plot (MC vs Exact vs Difference) ====
+
+print("\nGenerating comparison plot for highest sample count...")
+
+def symmetric_levels(data, n=50, percentile=98):
+    """Create levels symmetric around 0 using percentile-based vmax."""
+    vmax_pct = np.percentile(np.abs(data), percentile)
+    return np.linspace(-vmax_pct, vmax_pct, n)
+
+# Get Matsubara indices for axis labels
+iw_mesh = last_result['iw_mesh']
+iwn = np.array([iw.value.n for iw in iw_mesh])
+
+# Create 3x3 figure: rows = channels (s, d, m), cols = (MC, exact, difference)
+fig2, axes2 = plt.subplots(3, 3, figsize=(15, 12))
+
+channel_data = [
+    ('Singlet (s)', last_result['chi_mc']['s'], last_result['chi_exact']['s']),
+    ('Density (d)', last_result['chi_mc']['d'], last_result['chi_exact']['d']),
+    ('Magnetic (m)', last_result['chi_mc']['m'], last_result['chi_exact']['m']),
+]
+
+for row, (name, mc, exact) in enumerate(channel_data):
+    panels = [('MC', mc), ('Exact', exact), ('Diff', mc - exact)]
+    for col, (label, data) in enumerate(panels):
+        lvl = symmetric_levels(data.real)
+        im = axes2[row, col].contourf(iwn, iwn, data.real.T, levels=lvl, cmap='RdBu_r', extend='both')
+        axes2[row, col].set_title(f'{name} - {label} (Re)')
+        axes2[row, col].set_xlabel(r'$n_1$')
+        axes2[row, col].set_ylabel(r'$n_2$')
+        plt.colorbar(im, ax=axes2[row, col])
+
+plt.tight_layout()
+plt.savefig('../results/chi3_comparison.pdf')
+print('Saved to ../results/chi3_comparison.pdf')
+
+print("\nDone!")

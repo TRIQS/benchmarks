@@ -1,0 +1,239 @@
+#!/usr/bin/env python
+"""Compare chi3 from MC with exact Lehmann representation for half-filled Hubbard atom.
+
+Computes chi3 in singlet (s), density (d), and magnetic (m) channels:
+- chi_s = 2 * chi_pp['up', 'dn']                  (singlet pairing)
+- chi_d = chi_ph['up', 'up'] + chi_ph['up', 'dn'] (density)
+- chi_m = chi_ph['up', 'up'] - chi_ph['up', 'dn'] (magnetic)
+
+Exact reference from Lehmann representation of the Hubbard atom eigenstates.
+Frequency convention: (nu1, nu2) both fermionic, matching ctint commit ddd3ed74.
+- PP: Omega = nu1 + nu2
+- PH: Omega = nu2 - nu1
+"""
+
+import sys, os
+sys.path.append(os.getcwd() + "/..")
+sys.path.append(os.getcwd() + "/../../common")
+from model import *
+from triqs.gf import make_gf_imfreq, make_gf_dlr2d
+
+import numpy as np
+import matplotlib.pyplot as plt
+from h5 import HDFArchive
+from math import exp as mexp
+
+
+# ==== Section 1: Exact Lehmann representation ====
+
+# Eigenstates and energies for Hubbard atom
+states = ['0', 'up', 'dn', 'updn']
+
+E = {}
+E['0'] = 0.
+E['up'] = -mu - h
+E['dn'] = -mu + h
+E['updn'] = U - 2. * mu
+
+Z = sum(mexp(-beta * E[s]) for s in states)
+
+rho = {s: mexp(-beta * E[s]) / Z for s in states}
+
+
+def kronecker_freq(iw, iwp):
+    """Check if two Matsubara frequencies are equal."""
+    return abs(iw - iwp) < 1e-10
+
+
+def f_lehmann(i, j, k):
+    """Lehmann representation building block for three-point correlators."""
+    if abs(rho[k] - rho[i]) < 1e-14:
+        def func(iw, iwp):
+            reg = 1. / (iwp + E[j] - E[k]) * (rho[i] + rho[j]) / (iw + E[i] - E[j])
+            sing = beta * kronecker_freq(iw, -iwp) * rho[i] / (iwp + E[j] - E[i])
+            return reg + sing
+    else:
+        def func(iw, iwp):
+            return 1. / (iwp + E[j] - E[k]) * (
+                (rho[k] - rho[i]) / (iw + iwp + E[i] - E[k])
+                + (rho[i] + rho[j]) / (iw + E[i] - E[j])
+            )
+    return func
+
+
+def chi3pp_exact(block, iw, iwp):
+    """Exact chi3pp(nu1, nu2) from Lehmann representation.
+
+    chi3pp[s1,s2](nu1, nu2) = <T c^dag_s1(nu1) c_s1(0+) c^dag_s2(nu2) c_s2(0)>
+    """
+    if block == ('up', 'dn'):
+        return f_lehmann('updn', 'dn', '0')(-iw, -iwp) + f_lehmann('updn', 'up', '0')(-iwp, -iw)
+    elif block == ('dn', 'up'):
+        return f_lehmann('updn', 'up', '0')(-iw, -iwp) + f_lehmann('updn', 'dn', '0')(-iwp, -iw)
+    elif block in [('up', 'up'), ('dn', 'dn')]:
+        return 0.
+    else:
+        raise ValueError(f"Invalid block {block}")
+
+
+def chi3ph_exact(block, iw, iwp):
+    """Exact chi3ph(nu1, nu2) from Lehmann representation.
+
+    chi3ph[s1,s2](nu1, nu2) = <T c^dag_s1(nu1) c_s1(nu2) n_s2(0)>
+    Omega = nu2 - nu1 (particle-hole transfer frequency).
+    """
+    if block == ('up', 'dn'):
+        return f_lehmann('updn', 'dn', 'updn')(-iw, iwp) - f_lehmann('dn', 'updn', 'dn')(iw, -iwp)
+    elif block == ('dn', 'up'):
+        return f_lehmann('updn', 'up', 'updn')(-iw, iwp) - f_lehmann('up', 'updn', 'up')(iw, -iwp)
+    elif block == ('up', 'up'):
+        return f_lehmann('up', '0', 'up')(-iw, iwp) + f_lehmann('updn', 'dn', 'updn')(-iw, iwp)
+    elif block == ('dn', 'dn'):
+        return f_lehmann('dn', '0', 'dn')(-iw, iwp) + f_lehmann('updn', 'up', 'updn')(-iw, iwp)
+    else:
+        raise ValueError(f"Invalid block {block}")
+
+
+# ==== Section 2: Load DLR2D chi3 from results/ctint_nfft.h5 ====
+
+print("Loading DLR2D chi3 data...")
+with HDFArchive("../results/ctint_nfft.h5", 'r') as ar:
+    chi3pp_dlr2d = ar['chi3pp_iw']
+    chi3ph_dlr2d = ar['chi3ph_iw']
+
+
+# ==== Section 3: Convert DLR2D to full product mesh ====
+
+print("Converting DLR2D to full Matsubara mesh...")
+chi3pp = make_gf_imfreq(make_gf_dlr2d(chi3pp_dlr2d), n_iw)
+chi3ph = make_gf_imfreq(make_gf_dlr2d(chi3ph_dlr2d), n_iw)
+
+
+# ==== Section 4: Compute s, d, m channels from MC data ====
+
+print("Computing s, d, m channels from MC data...")
+
+chi3pp_updn = chi3pp['up', 'dn'].data[:, :, 0, 0, 0, 0]
+chi3ph_upup = chi3ph['up', 'up'].data[:, :, 0, 0, 0, 0]
+chi3ph_updn = chi3ph['up', 'dn'].data[:, :, 0, 0, 0, 0]
+
+chi_s_mc = 2 * chi3pp_updn
+chi_d_mc = chi3ph_upup + chi3ph_updn
+chi_m_mc = chi3ph_upup - chi3ph_updn
+
+
+# ==== Section 5: Compute exact channels on same mesh ====
+
+print("Computing exact chi3 from Lehmann representation...")
+
+iw_mesh_out = chi3pp['up', 'dn'].mesh[0]
+n_pts = len(iw_mesh_out)
+inu = np.array([complex(iw) for iw in iw_mesh_out])
+
+# Evaluate exact chi3pp and chi3ph block by block
+chi3pp_updn_exact = np.zeros((n_pts, n_pts), dtype=complex)
+chi3ph_upup_exact = np.zeros((n_pts, n_pts), dtype=complex)
+chi3ph_updn_exact = np.zeros((n_pts, n_pts), dtype=complex)
+
+for i, nu1 in enumerate(inu):
+    for j, nu2 in enumerate(inu):
+        chi3pp_updn_exact[i, j] = chi3pp_exact(('up', 'dn'), nu1, nu2)
+        chi3ph_upup_exact[i, j] = chi3ph_exact(('up', 'up'), nu1, nu2)
+        chi3ph_updn_exact[i, j] = chi3ph_exact(('up', 'dn'), nu1, nu2)
+
+# Channel combinations
+chi_s_exact = 2 * chi3pp_updn_exact
+chi_d_exact = chi3ph_upup_exact + chi3ph_updn_exact
+chi_m_exact = chi3ph_upup_exact - chi3ph_updn_exact
+
+
+# ==== Section 6: Compute comparison metrics ====
+
+def compute_metrics(chi_mc, chi_exact, name):
+    """Compute and print comparison metrics between MC and exact."""
+    diff = chi_mc - chi_exact
+    l2_exact = np.sqrt(np.sum(np.abs(chi_exact)**2)) / beta**2
+    l2_diff = np.sqrt(np.sum(np.abs(diff)**2)) / beta**2
+    linf_exact = np.max(np.abs(chi_exact))
+    linf_diff = np.max(np.abs(diff))
+
+    metrics = {
+        'l2_norm': l2_exact,
+        'linf_norm': linf_exact,
+        'l2_error': l2_diff,
+        'linf_error': linf_diff,
+        'rel_l2_error': l2_diff / l2_exact if l2_exact > 1e-14 else np.nan,
+        'rel_linf_error': linf_diff / linf_exact if linf_exact > 1e-14 else np.nan,
+    }
+
+    print(f"\n--- {name} ---")
+    for key, val in metrics.items():
+        print(f"  {key:18s}: {val:.6e}")
+
+    return metrics
+
+
+print("\n=== Comparison: MC vs Lehmann Exact ===")
+metrics_s = compute_metrics(chi_s_mc, chi_s_exact, "chi_s (singlet)")
+metrics_d = compute_metrics(chi_d_mc, chi_d_exact, "chi_d (density)")
+metrics_m = compute_metrics(chi_m_mc, chi_m_exact, "chi_m (magnetic)")
+
+
+# ==== Section 7: Generate plots ====
+
+print("\nGenerating plots...")
+
+iwn = np.array([iw.value.n for iw in iw_mesh_out])
+
+def symmetric_levels(data, n=50, percentile=98):
+    vmax_pct = np.percentile(np.abs(data), percentile)
+    if vmax_pct < 1e-14:
+        vmax_pct = np.max(np.abs(data))
+    return np.linspace(-vmax_pct, vmax_pct, n)
+
+fig, axes = plt.subplots(3, 3, figsize=(15, 12))
+
+channels = [
+    ('chi_s (singlet)', chi_s_mc, chi_s_exact),
+    ('chi_d (density)', chi_d_mc, chi_d_exact),
+    ('chi_m (magnetic)', chi_m_mc, chi_m_exact),
+]
+
+for row, (name, mc, exact) in enumerate(channels):
+    panels = [('MC', mc), ('Exact', exact), ('Diff', mc - exact)]
+    for col, (label, data) in enumerate(panels):
+        lvl = symmetric_levels(data.real)
+        im = axes[row, col].contourf(iwn, iwn, data.real.T, levels=lvl, cmap='RdBu_r', extend='both')
+        axes[row, col].set_title(f'{name} - {label} (Re)')
+        axes[row, col].set_xlabel(r'$n_1$')
+        axes[row, col].set_ylabel(r'$n_2$')
+        plt.colorbar(im, ax=axes[row, col])
+
+plt.tight_layout()
+plt.savefig('../results/chi3_comparison_lehmann.pdf')
+print('Saved to ../results/chi3_comparison_lehmann.pdf')
+
+
+# ==== Section 8: Save results to HDF5 ====
+
+print("\nSaving results to HDF5...")
+with HDFArchive("../results/chi3_comparison_lehmann.h5", 'w') as ar:
+    ar['chi_s_mc'] = chi_s_mc
+    ar['chi_d_mc'] = chi_d_mc
+    ar['chi_m_mc'] = chi_m_mc
+
+    ar['chi_s_exact'] = chi_s_exact
+    ar['chi_d_exact'] = chi_d_exact
+    ar['chi_m_exact'] = chi_m_exact
+
+    ar.create_group('metrics')
+    ar['metrics']['singlet'] = metrics_s
+    ar['metrics']['density'] = metrics_d
+    ar['metrics']['magnetic'] = metrics_m
+
+    ar['beta'] = beta
+    ar['U'] = U
+    ar['n_iw'] = n_iw
+
+print('Saved to ../results/chi3_comparison_lehmann.h5')
+print("\nDone!")
