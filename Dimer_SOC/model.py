@@ -2,7 +2,7 @@ import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *
 
-from triqs.gf import Gf, MeshImFreq, iOmega_n, inverse
+from triqs.gf import Gf, MeshImFreq, MeshDLRImFreq, iOmega_n, inverse
 from triqs.operators import c, c_dag, n
 from triqs.operators.util.hamiltonians import h_int_kanamori
 from itertools import product
@@ -73,14 +73,22 @@ h_tot = h_imp + h_coup + h_bath
 # ==== Green function structure ====
 gf_struct = [ ('bl', n_orb) ]
 
-# ==== Hybridization Function ====
+# ==== Frequency Meshes ====
 n_iw = int(10 * beta)
 iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
-Delta_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
-# FIXME Delta_iw['bl'] << V_mat * inverse(iOmega_n - h_bath_mat) * V_mat.transpose()
-for iw in iw_mesh:
-    Delta_iw['bl'][iw] = V_mat * inv(iw.value * eye(n_orb) - h_bath_mat) * V_mat.transpose()
+dlr_wmax = 2*U
+dlr_eps = 1e-10
+dlr_iw_mesh = MeshDLRImFreq(beta, 'Fermion', dlr_wmax, dlr_eps, True)
 
-# ==== Non-Interacting Impurity Green function  ====
-G0_iw = Delta_iw.copy()
-G0_iw['bl'] << inverse(iOmega_n - h_0_mat - Delta_iw['bl'])
+# ==== Non-Interacting Impurity Green function and Hybridization ====
+# FIXME Delta['bl'] << V_mat * inverse(iOmega_n - h_bath_mat) * V_mat.transpose()
+def make_gf(mesh):
+    Delta = BlockGf(mesh=mesh, gf_struct=gf_struct)
+    for iw in mesh:
+        Delta['bl'][iw] = V_mat * inv(iw.value * eye(n_orb) - h_bath_mat) * V_mat.transpose()
+    G0 = Delta.copy()
+    G0['bl'] << inverse(iOmega_n - h_0_mat - Delta['bl'])
+    return G0, Delta
+
+G0_iw, Delta_iw = make_gf(iw_mesh)
+G0_dlr_iw, Delta_dlr = make_gf(dlr_iw_mesh)

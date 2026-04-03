@@ -2,7 +2,7 @@ import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *
 
-from triqs.gf import Gf, MeshImFreq, iOmega_n, inverse
+from triqs.gf import Gf, MeshImFreq, MeshDLRImFreq, iOmega_n, inverse
 from triqs.operators import c, c_dag, n
 from itertools import product
 
@@ -30,13 +30,21 @@ h_tot = h_imp + h_coup + h_bath
 # ==== Green function structure ====
 gf_struct = [ (s, n_orb) for s in block_names ]
 
-# ==== Hybridization Function ====
+# ==== Frequency Meshes ====
 n_iw = int(10 * beta)
 iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
-Delta_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
-Delta_iw << 0.0;
+dlr_wmax = 2*U
+dlr_eps = 1e-10
+dlr_iw_mesh = MeshDLRImFreq(beta, 'Fermion', dlr_wmax, dlr_eps, True)
 
-# ==== Non-Interacting Impurity Green function  ====
-G0_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
-G0_iw['up'] << inverse(iOmega_n + mu + h - Delta_iw['up'])
-G0_iw['dn'] << inverse(iOmega_n + mu - h - Delta_iw['dn'])
+# ==== Non-Interacting Impurity Green function and target Hybridization ====
+def make_gf(mesh):
+    Delta = BlockGf(mesh=mesh, gf_struct=gf_struct)
+    Delta << 0.0
+    G0 = BlockGf(mesh=mesh, gf_struct=gf_struct)
+    G0['up'] << inverse(iOmega_n + mu + h - Delta['up'])
+    G0['dn'] << inverse(iOmega_n + mu - h - Delta['dn'])
+    return G0, Delta
+
+G0_iw, Delta_iw = make_gf(iw_mesh)
+G0_dlr_iw, Delta_dlr = make_gf(dlr_iw_mesh)
