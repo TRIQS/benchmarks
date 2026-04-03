@@ -1,0 +1,77 @@
+#!/usr/bin/env python
+
+import sys, os
+sys.path.append(os.getcwd() + "/..")
+sys.path.append(os.getcwd() + "/../../common")
+
+import numpy as np
+import matplotlib.pyplot as plt
+from h5 import HDFArchive
+from triqs.gf import *
+
+# Load data
+with HDFArchive("../results/ctint_nfft.h5", 'r') as ar:
+    chi3pp = ar['chi3pp_iw']['up', 'dn']
+    chi3ph = ar['chi3ph_iw']['up', 'dn']
+
+# Extract mesh info
+iw_mesh = chi3pp.mesh[0]
+n_iw = len(iw_mesh) // 2
+iwn = np.array([iw.value.n for iw in iw_mesh])
+
+# Extract data (squeeze orbital indices)
+chi3pp_data = chi3pp.data[:, :, 0, 0, 0, 0]
+chi3ph_data = chi3ph.data[:, :, 0, 0, 0, 0]
+
+# Create figure
+fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+
+def symmetric_levels(data, n=50, percentile=98):
+    """Create levels symmetric around 0 using percentile-based vmax."""
+    vmax_data = max(abs(data.min()), abs(data.max()))
+    vmax_pct = np.percentile(np.abs(data), percentile)
+    vmax = vmax_pct
+    return np.linspace(-vmax, vmax, n), vmax_data
+
+def symmetric_ticks(vmax, n=4):
+    """Create ticks symmetric around 0, including -vmax, 0, and +vmax."""
+    ticks = np.linspace(-vmax, vmax, 2*n + 1)
+    # Ensure exact -vmax, 0, +vmax are included
+    ticks[0] = -vmax
+    ticks[n] = 0
+    ticks[-1] = vmax
+    return ticks
+
+# Plot chi3pp real and imaginary parts
+lvl0, vmax0 = symmetric_levels(chi3pp_data.real)
+im0 = axes[0, 0].contourf(iwn, iwn, chi3pp_data.real.T, levels=lvl0, cmap='RdBu_r', extend='both')
+axes[0, 0].set_xlabel(r'$n_1$')
+axes[0, 0].set_ylabel(r'$n_2$')
+axes[0, 0].set_title(r"Re $\chi^{(3)}_{pp}(i\omega_{n_1}, i\omega_{n_2})$ ['up','dn']")
+plt.colorbar(im0, ax=axes[0, 0], ticks=symmetric_ticks(abs(lvl0).max()))
+
+lvl1, vmax1 = symmetric_levels(chi3pp_data.imag)
+im1 = axes[0, 1].contourf(iwn, iwn, chi3pp_data.imag.T, levels=lvl1, cmap='RdBu_r', extend='both')
+axes[0, 1].set_xlabel(r'$n_1$')
+axes[0, 1].set_ylabel(r'$n_2$')
+axes[0, 1].set_title(r"Im $\chi^{(3)}_{pp}(i\omega_{n_1}, i\omega_{n_2})$ ['up','dn']")
+plt.colorbar(im1, ax=axes[0, 1], ticks=symmetric_ticks(abs(lvl1).max()))
+
+# Plot chi3ph real and imaginary parts
+lvl2, vmax2 = symmetric_levels(chi3ph_data.real)
+im2 = axes[1, 0].contourf(iwn, iwn, chi3ph_data.real.T, levels=lvl2, cmap='RdBu_r', extend='both')
+axes[1, 0].set_xlabel(r'$n_1$')
+axes[1, 0].set_ylabel(r'$n_2$')
+axes[1, 0].set_title(r"Re $\chi^{(3)}_{ph}(i\omega_{n_1}, i\omega_{n_2})$ ['up','dn']")
+plt.colorbar(im2, ax=axes[1, 0], ticks=symmetric_ticks(abs(lvl2).max()))
+
+lvl3, vmax3 = symmetric_levels(chi3ph_data.imag)
+im3 = axes[1, 1].contourf(iwn, iwn, chi3ph_data.imag.T, levels=lvl3, cmap='RdBu_r', extend='both')
+axes[1, 1].set_xlabel(r'$n_1$')
+axes[1, 1].set_ylabel(r'$n_2$')
+axes[1, 1].set_title(r"Im $\chi^{(3)}_{ph}(i\omega_{n_1}, i\omega_{n_2})$ ['up','dn']")
+plt.colorbar(im3, ax=axes[1, 1], ticks=symmetric_ticks(abs(lvl3).max()))
+
+plt.tight_layout()
+plt.savefig('../results/chi3_contour.pdf')
+print('Saved to ../results/chi3_contour.pdf')
