@@ -2,7 +2,7 @@ import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *
 
-from triqs.gf import Gf, MeshImFreq, MeshDLRImFreq, iOmega_n, inverse
+from triqs.gf import Gf, MeshImFreq, MeshDLRImFreq, MeshReFreq, iOmega_n, inverse
 from triqs.operators import c, c_dag, n
 from triqs.operators.util.hamiltonians import h_int_kanamori
 from itertools import product
@@ -79,6 +79,12 @@ iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
 dlr_wmax = 2*U
 dlr_eps = 1e-10
 dlr_iw_mesh = MeshDLRImFreq(beta, 'Fermion', dlr_wmax, dlr_eps, True)
+
+# ==== Real-Frequency Mesh (for models with discrete spectra) ====
+n_w = 3001
+w_window = (-10, 10)
+w_mesh = MeshReFreq(window=w_window, n_w=n_w)
+broadening = 0.1
 
 # ==== Non-Interacting Impurity Green function and Hybridization ====
 # FIXME Delta['bl'] << V_mat * inverse(iOmega_n - h_bath_mat) * V_mat.transpose()

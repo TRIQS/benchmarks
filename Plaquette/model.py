@@ -2,7 +2,7 @@ import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *
 
-from triqs.gf import Gf, MeshImFreq, MeshDLRImFreq, BlockGf, iOmega_n, inverse
+from triqs.gf import Gf, MeshImFreq, MeshDLRImFreq, MeshReFreq, BlockGf, iOmega_n, inverse
 from triqs.operators import c, c_dag, n
 from numpy import array, matrix
 
@@ -50,6 +50,12 @@ iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
 dlr_wmax = 2*U
 dlr_eps = 1e-10
 dlr_iw_mesh = MeshDLRImFreq(beta, 'Fermion', dlr_wmax, dlr_eps, True)
+
+# ==== Real-Frequency Mesh (for models with discrete spectra) ====
+n_w = 3001
+w_window = (-10, 10)
+w_mesh = MeshReFreq(window=w_window, n_w=n_w)
+broadening = 0.1
 
 # ==== Non-Interacting Green function and Hybridization (zero for isolated cluster) ====
 def make_gf(mesh):
