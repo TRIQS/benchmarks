@@ -1,0 +1,6 @@
+*/results/*.h5
+*/results/*.log
+*/results/*.pdf
+**/__pycache__/
+benchmark_results.json
+slurm_*.sh

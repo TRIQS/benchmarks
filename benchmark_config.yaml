@@ -1,0 +1,100 @@
+defaults:
+  n_mpi_ranks: 4
+
+models:
+  Hubbard_Atom:
+    runs:
+      - exact
+      - {solver: pyed, measure: all}
+      - pomerol
+      - {solver: atomdiag, measure: G_w}
+      - {solver: ctint, measure: chi3}
+      - alps_cthyb
+      - cthyb
+
+  SIAM_Discrete_Bath:
+    runs:
+      - pyed
+      - pomerol
+      - {solver: atomdiag, measure: G_w}
+      - cthyb
+      - ctint
+      - ctseg
+      - w2dyn_cthyb
+
+  SIAM_Discrete_Bath_3Level:
+    runs:
+      - pyed
+      - pomerol
+      - {solver: atomdiag, measure: G_w}
+      - cthyb
+      - ctint
+      - ctseg
+      - w2dyn_cthyb
+
+  SIAM_Wide_Band:
+    runs: [cthyb, ctint, ctseg, w2dyn_cthyb]
+
+  SIAM_DynU:
+    runs: [ctint, ctseg]
+
+  SIAM_Jperp:
+    runs: [cthyb, ctint, ctseg]
+
+  Dimer:
+    runs:
+      - pyed
+      - pomerol
+      - {solver: atomdiag, measure: G_w}
+      - cthyb
+      - ctint
+      - alps_cthyb
+      - w2dyn_cthyb
+
+  Dimer_nn:
+    runs:
+      - pyed
+      - pomerol
+      - {solver: atomdiag, measure: G_w}
+      - cthyb
+      - ctint
+      - ctseg
+      - alps_cthyb
+      - w2dyn_cthyb
+
+  Dimer_SOC:
+    runs:
+      - pyed
+      - pomerol
+      - {solver: atomdiag, measure: G_w}
+      - ctint
+      - alps_cthyb
+
+  Trimer:
+    runs:
+      - pomerol
+      - {solver: atomdiag, measure: G_w}
+      - cthyb
+      - ctint
+      - alps_cthyb
+      - w2dyn_cthyb
+
+  Plaquette:
+    runs:
+      - {solver: atomdiag, measure: G_w}
+      - ctint
+
+  Plaquette_Wide_Band:
+    runs: [cthyb, ctint]
+
+  La2CuO4:
+    runs: [cthyb, ctint, ctseg, forktps, w2dyn_cthyb]
+    n_mpi_ranks: 16
+
+  Sr2RuO4:
+    runs: [cthyb, ctint, alps_cthyb, w2dyn_cthyb]
+    n_mpi_ranks: 16
+
+  Sr2RuO4_SOC:
+    runs: [cthyb, ctint, w2dyn_cthyb]
+    n_mpi_ranks: 16
