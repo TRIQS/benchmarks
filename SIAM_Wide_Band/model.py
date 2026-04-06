@@ -5,7 +5,7 @@ from util import *
 from triqs.gf import Gf, MeshImFreq, iOmega_n, inverse
 from triqs.operators import c, c_dag, n
 from itertools import product
-from numpy import sign
+from numpy import sign, matrix
 
 # ==== System Parameters ====
 beta = 5.           # Inverse temperature
@@ -16,6 +16,10 @@ Gamma = 1.          # Hybridization energy
 
 block_names = ['up', 'dn']
 n_orb = 1
+
+# ==== Operator vectors (needed for ctseg) ====
+c_dag_vec = { s: matrix([[c_dag(s,o) for o in range(n_orb)]]) for s in block_names }
+c_vec     = { s: matrix([[c(s,o)] for o in range(n_orb)]) for s in block_names }
 
 # ==== Local Hamiltonian ====
 h_0 = - mu*( n('up',0) + n('dn',0) ) - h*( n('up',0) - n('dn',0) )
