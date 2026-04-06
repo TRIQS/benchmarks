@@ -14,6 +14,11 @@ import numpy as np
 SUPPORTED = []
 args = parse_measure_args(SUPPORTED)
 
+# --------- Auto-detect dynamic interactions from model.py ----------
+has_Jperp = 'Jperp_func' in dir()
+
+n_tau_bosonic = 2001
+
 # --------- Construct the CTHYB solver ----------
 constr_params = {
         'beta' : beta,
@@ -21,10 +26,48 @@ constr_params = {
         'n_iw' : n_iw,
         'n_tau' : 10001
         }
+
+if has_Jperp:
+    constr_params['delta_interface'] = True
+    constr_params['n_tau_bosonic'] = n_tau_bosonic
+
 S = Solver(**constr_params)
 
-# --------- Initialize G0_iw ----------
-S.G0_iw << G0_iw
+# --------- Initialize G0_iw / Delta_tau ----------
+if has_Jperp:
+    from triqs.gf import fit_hermitian_tail, Fourier, GfImFreq, GfImTime
+    from triqs.operators import c_dag as c_dag_op
+
+    # Decompose G0_iw into Delta_iw + h_loc0
+    Delta_iw = G0_iw.copy()
+    h0_matrices = {}
+    for bl in G0_iw.indices:
+        Delta_iw[bl] << iOmega_n - inverse(G0_iw[bl])
+        tail, err = fit_hermitian_tail(Delta_iw[bl])
+        h0_matrices[bl] = tail[0]
+        Delta_iw[bl] << Delta_iw[bl] - tail[0]
+
+    S.Delta_tau << Fourier(Delta_iw)
+
+    # Build h_loc0 operator from h_0 matrices
+    from triqs.operators import Operator
+    h_loc0 = Operator()
+    for bl, bl_size in gf_struct:
+        h0 = h0_matrices[bl]
+        for i in range(bl_size):
+            for j in range(bl_size):
+                val = h0[i, j].real if np.ndim(h0) > 0 else float(h0.real)
+                if abs(val) > 1e-10:
+                    h_loc0 += val * c_dag_op(bl, i) * c(bl, j)
+
+    # Set up Jperp_tau
+    jperp_iw = GfImFreq(indices=[0], beta=beta, statistic="Boson", n_points=n_tau_bosonic // 2)
+    jperp_iw << Jperp_func
+    jperp_tau = GfImTime(indices=[0], beta=beta, statistic="Boson", n_points=n_tau_bosonic)
+    jperp_tau << Fourier(jperp_iw)
+    S.Jperp_tau << jperp_tau
+else:
+    S.G0_iw << G0_iw
 
 # --------- Solve! ----------
 solve_params = {
@@ -35,6 +78,10 @@ solve_params = {
         'measure_pert_order' : True,
         'measure_density_matrix' : True,
         }
+
+if has_Jperp:
+    solve_params['h_loc0'] = h_loc0
+
 start = time.time()
 S.solve(**solve_params)
 run_time = time.time() - start

@@ -12,6 +12,10 @@ from triqs_ctint import Solver, version
 SUPPORTED = []
 args = parse_measure_args(SUPPORTED)
 
+# --------- Auto-detect dynamic interactions from model.py ----------
+has_D0 = 'D0_func' in dir()
+has_Jperp = 'Jperp_func' in dir()
+
 # --------- Construct the CTINT solver ----------
 constr_params = {
         'beta' : beta,
@@ -19,10 +23,25 @@ constr_params = {
         'n_iw' : n_iw,
         'n_tau' : 10001
         }
+
+if has_D0:
+    constr_params['use_D'] = True
+    constr_params['n_tau_dynamical_interactions'] = 2000
+if has_Jperp:
+    constr_params['use_Jperp'] = True
+    constr_params['n_tau_dynamical_interactions'] = 2000
+
 S = Solver(**constr_params)
 
 # --------- Initialize G0_iw ----------
 S.G0_iw << G0_iw
+
+# --------- Fill dynamic interactions ----------
+if has_D0:
+    for b1, b2 in D0_block_pairs:
+        S.D0_iw[b1, b2][0, 0] << D0_func
+if has_Jperp:
+    S.Jperp_iw[0, 0] << Jperp_func
 
 # --------- Solve! ----------
 solve_params = {

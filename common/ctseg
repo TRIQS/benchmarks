@@ -9,7 +9,7 @@ from save_utils import save_results, parse_measure_args
 import numpy as np
 from numpy import linalg
 
-from triqs.gf import fit_hermitian_tail, Fourier, make_zero_tail
+from triqs.gf import fit_hermitian_tail, Fourier, make_zero_tail, GfImFreq, GfImTime
 from triqs.utility import mpi
 from triqs_ctseg import Solver, version
 
@@ -17,12 +17,22 @@ from triqs_ctseg import Solver, version
 SUPPORTED = []
 args = parse_measure_args(SUPPORTED)
 
+# --------- Auto-detect dynamic interactions from model.py ----------
+has_D0 = 'D0_func' in dir()
+has_Jperp = 'Jperp_func' in dir()
+
+n_tau_bosonic = 2001
+
 # --------- Construct the CTSEG solver ----------
 constr_params = {
         'beta' : beta,
         'gf_struct' : gf_struct,
         'n_tau' : 10001
         }
+
+if has_D0 or has_Jperp:
+    constr_params['n_tau_bosonic'] = n_tau_bosonic
+
 S = Solver(**constr_params)
 
 # --- We need to rotate G0_iw into the local eigenbasis
@@ -55,9 +65,25 @@ h_loc0 = sum(c_dag_vec[s] * h0_bl[s] * c_vec[s] for s in block_names)[0,0]
 for (bl, g0_bl), rot_bl in zip(Delta_iw, rot_lst):
     g0_bl << rot_bl.H * g0_bl * rot_bl
 
-# --------- Initialize G0_iw ----------
+# --------- Initialize Delta_tau ----------
 S.Delta_tau << Fourier(Delta_iw)
 S.Delta_tau << S.Delta_tau.real
+
+# --------- Fill dynamic interactions ----------
+if has_D0:
+    d0_iw = GfImFreq(indices=[0], beta=beta, statistic="Boson", n_points=n_tau_bosonic // 2)
+    d0_iw << D0_func
+    d0_tau = GfImTime(indices=[0], beta=beta, statistic="Boson", n_points=n_tau_bosonic)
+    d0_tau << Fourier(d0_iw)
+    for b1, b2 in D0_block_pairs:
+        S.D0_tau[b1, b2] << d0_tau
+
+if has_Jperp:
+    jperp_iw = GfImFreq(indices=[0], beta=beta, statistic="Boson", n_points=n_tau_bosonic // 2)
+    jperp_iw << Jperp_func
+    jperp_tau = GfImTime(indices=[0], beta=beta, statistic="Boson", n_points=n_tau_bosonic)
+    jperp_tau << Fourier(jperp_iw)
+    S.Jperp_tau << jperp_tau
 
 # --------- Solve! ----------
 solve_params = {

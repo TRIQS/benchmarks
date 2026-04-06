@@ -13,7 +13,7 @@ from triqs.atom_diag import *
 from triqs import version
 
 # --------- Parse arguments ----------
-SUPPORTED = []
+SUPPORTED = ['G_w']
 args = parse_measure_args(SUPPORTED)
 
 # --------- Construct the AtomDiag Object ----------
@@ -49,6 +49,18 @@ for bl, bl_size in gf_struct:
                 key2 = f"{bl2}_{j}" if bl2_size > 1 else bl2
                 nn_ab[f"{key},{key2}"] = trace_rho_op(rho, n(bl, i) * n(bl2, j), ad_tot)
 obs['static_obs'] = {'density': density, 'nn_ab': nn_ab}
+
+# Real-frequency Green function (--measure G_w)
+if 'G_w' in args.measure:
+    if 'w_mesh' not in dir():
+        print("ERROR: model.py does not define w_mesh. Cannot compute G_w.")
+        sys.exit(1)
+    if 'broadening' not in dir():
+        print("ERROR: model.py does not define broadening. Cannot compute G_w.")
+        sys.exit(1)
+    G_w_tot = atomic_g_w(ad_tot, beta, gf_struct_tot, w_mesh, broadening)
+    block_list_w = [G_w_tot[bl][:n_orb, :n_orb] for bl, n_orb in gf_struct]
+    obs['G_w'] = BlockGf(name_list=name_list, block_list=block_list_w)
 
 # --------- Save ----------
 save_results("../results/atomdiag.h5", "atomdiag", version.version,

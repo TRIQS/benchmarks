@@ -22,15 +22,7 @@ models:
       - ctseg
       - w2dyn_cthyb
 
-  SIAM_Discrete_Bath_3Level:
-    runs:
-      - pyed
-      - pomerol
-      - {solver: atomdiag, measure: G_w}
-      - cthyb
-      - ctint
-      - ctseg
-      - w2dyn_cthyb
+  # SIAM_Discrete_Bath_3Level: model.py not yet created, skipped for now
 
   SIAM_Wide_Band:
     runs: [cthyb, ctint, ctseg, w2dyn_cthyb]
