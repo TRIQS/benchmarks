@@ -5,10 +5,13 @@ sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
 from model import *
 import util
+from save_utils import save_results, parse_measure_args
 
-from h5 import HDFArchive
-from triqs.utility import mpi
 from pomerol2triqs import PomerolED
+
+# --------- Parse arguments ----------
+SUPPORTED = []
+args = parse_measure_args(SUPPORTED)
 
 # --------- Construct the ED solver ----------
 get_idx_tpl = lambda x: tuple(next(iter(x))[0][0][1])
@@ -30,6 +33,21 @@ ed = PomerolED(index_converter, verbose = True)
 ed.diagonalize(h_tot)
 G_iw = ed.G_iw([(bl, idx_lst) for bl, idx_lst in gf_struct], beta, n_iw)
 
-# -------- Save in archive ---------
-with HDFArchive("../results/pomerol.h5",'w') as res:
-    res["G"] = G_iw
+# --------- Collect observables ----------
+obs = {'G': G_iw}
+
+# Static observables
+density = {}
+nn_ab = {}
+for bl, bl_size in gf_struct:
+    for i in range(bl_size):
+        key = f"{bl}_{i}" if bl_size > 1 else bl
+        density[key] = ed.ensemble_average(n(bl, i))
+        for bl2, bl2_size in gf_struct:
+            for j in range(bl2_size):
+                key2 = f"{bl2}_{j}" if bl2_size > 1 else bl2
+                nn_ab[f"{key},{key2}"] = ed.ensemble_average(n(bl, i) * n(bl2, j))
+obs['static_obs'] = {'density': density, 'nn_ab': nn_ab}
+
+# --------- Save ----------
+save_results("../results/pomerol.h5", "pomerol", "N/A", "N/A", **obs)

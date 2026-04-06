@@ -11,6 +11,7 @@ sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
 from model import *
 from dcore_util import *
+from save_utils import save_results, parse_measure_args
 
 raise_if_mpi_imported()
 
@@ -18,6 +19,10 @@ import triqs
 from h5 import HDFArchive
 
 raise_if_mpi_imported()
+
+# --------- Parse arguments ----------
+SUPPORTED = []
+args = parse_measure_args(SUPPORTED)
 
 norb, gf_struct_dcore, u_mat, G0_iw_dcore = convert_to_dcore_format(gf_struct, h_int, G0_iw, beta, n_iw)
 
@@ -50,18 +55,13 @@ solve_params = {
         }
 start = time.time()
 S.solve(rot, mpirun_command, solve_params)
-end = time.time()
+run_time = time.time() - start
 
-# -------- Save in archive ---------
-with HDFArchive("../results/alps_cthyb.h5",'w') as results:
-    results["G"] = convert_to_triqs_bname(S.get_Gimp_iw(), gf_struct, beta, n_iw)
+# --------- Collect observables ----------
+G_result = convert_to_triqs_bname(S.get_Gimp_iw(), gf_struct, beta, n_iw)
+obs = {'G': G_result}
 
-    import inspect
-    import __main__
-    results.create_group("Solver_Info")
-    info_grp = results["Solver_Info"]
-    info_grp["solver_name"] = "alps_cthyb"
-    info_grp["constr_params"] = constr_params
-    #info_grp["triqs_git_hash"] = version.triqs_hash
-    info_grp["script"] = inspect.getsource(__main__)
-    info_grp["run_time"] = end - start
+# --------- Save ----------
+save_results("../results/alps_cthyb.h5", "alps_cthyb", "N/A", "N/A",
+             constr_params=constr_params, solve_params=solve_params,
+             run_time=run_time, **obs)

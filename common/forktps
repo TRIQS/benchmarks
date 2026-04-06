@@ -1,22 +1,17 @@
 #!/usr/bin/env python
 
-import sys
-import os
-import time
+import sys, os, time
 from itertools import product
-from triqs.plot.mpl_interface import plt, oplot
 
 sys.path.append(os.getcwd() + '/..')
 sys.path.append(os.getcwd() + '/../../common')
 from model import *
+from save_utils import save_results, parse_measure_args
 
 import numpy as np
 
-from h5 import HDFArchive
 from triqs.gf import fit_hermitian_tail, Fourier
 from triqs.utility import mpi
-from triqs.version import git_hash as triqs_git_hash
-
 
 import forktps as ftps
 from forktps.version import forktps_hash, version
@@ -25,6 +20,9 @@ from forktps.BathFitting import BathFitter
 from forktps.Helpers import MakeGFstruct
 from forktps.DiscreteBath import SigmaDyson
 
+# --------- Parse arguments ----------
+SUPPORTED = []
+args = parse_measure_args(SUPPORTED)
 
 # helper functions
 def make_positive_definite(G):
@@ -131,7 +129,7 @@ S.solve(
     GFs=['S'],
     state_storage=state_storage,
 )
-end = time.time()
+run_time = time.time() - start
 
 G_w = symmetrize(S.G_w)
 G_w = make_positive_definite(G_w)
@@ -140,27 +138,13 @@ G_w = make_positive_definite(G_w)
 # do not use Dyson equation directly, as G0 might have wrong eta
 Sigma_w = SigmaDyson(Gret=S.G_ret, bath=S.b, hloc=S.e0, mesh=Delta_w.mesh, eta=eta, symmG=symmetrize)
 
-# -------- Save in archive ---------
-if mpi.is_master_node():
-    with HDFArchive('../results/forktps.h5', 'w') as results:
-        results['G'] = S.G_w
-        # results["Gsym"] = G_w
-        results['Gtime'] = S.G_ret
-        results['Sigma'] = Sigma_w
+# --------- Collect observables ----------
+obs = {
+    'G_w': S.G_w,
+    'Sigma_w': Sigma_w,
+    'G_ret': S.G_ret,
+}
 
-        import inspect
-        import __main__
-
-        results.create_group('Solver_Info')
-        info_grp = results['Solver_Info']
-        info_grp['solver_name'] = 'triqs_forktps'
-        info_grp['sector_params'] = sector_params
-        info_grp['dmrg_params'] = dmrg_params
-        info_grp['tevo_params'] = tevo_params
-        info_grp['solver'] = S
-        info_grp['solver_version'] = version
-        info_grp['solver_git_hash'] = forktps_hash
-        info_grp['triqs_git_hash'] = triqs_git_hash
-        info_grp['script'] = inspect.getsource(__main__)
-        info_grp['num_threads'] = mpi.size
-        info_grp['run_time'] = end - start
+# --------- Save ----------
+save_results('../results/forktps.h5', 'forktps', version, forktps_hash,
+             run_time=run_time, **obs)

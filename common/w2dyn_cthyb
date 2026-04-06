@@ -4,10 +4,14 @@ import sys, os, time
 sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
 from model import *
+from save_utils import save_results, parse_measure_args
 
-from h5 import HDFArchive
 from triqs.utility import mpi
 from w2dyn_cthyb import Solver, version
+
+# --------- Parse arguments ----------
+SUPPORTED = []
+args = parse_measure_args(SUPPORTED)
 
 # --------- Construct the W2dyn CTHYB solver ----------
 constr_params = {
@@ -32,24 +36,13 @@ solve_params = {
 
 start = time.time()
 S.solve(**solve_params)
-end = time.time()
+run_time = time.time() - start
 
-# -------- Save in archive ---------
-if mpi.is_master_node():
-    with HDFArchive("../results/w2dyn_cthyb.h5",'w') as results:
-        results["G"] = S.G_iw
+# --------- Collect observables ----------
+obs = {'G': S.G_iw}
 
-        import inspect
-        import __main__
-        results.create_group("Solver_Info")
-        info_grp = results["Solver_Info"]
-        info_grp["solver_name"] = "w2dyn_cthyb"
-        info_grp["constr_params"] = constr_params
-        info_grp["solve_params"] = solve_params
-        #info_grp["solver"] = S # FIXME
-        info_grp["solver_version"] = version.version
-        info_grp["solver_git_hash"] = version.w2dyn_cthyb_hash
-        info_grp["triqs_git_hash"] = version.triqs_hash
-        info_grp["script"] = inspect.getsource(__main__)
-        info_grp["num_threads"] = mpi.world.Get_size()
-        info_grp["run_time"] = end - start
+# --------- Save ----------
+save_results("../results/w2dyn_cthyb.h5", "w2dyn_cthyb", version.version,
+             version.w2dyn_cthyb_hash,
+             constr_params=constr_params, solve_params=solve_params,
+             run_time=run_time, **obs)

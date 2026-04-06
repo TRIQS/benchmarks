@@ -6,11 +6,15 @@ sys.path.append(os.getcwd() + "/../../common")
 from model import *
 from itertools import product
 import util
+from save_utils import save_results, parse_measure_args
 
-from h5 import HDFArchive
 from triqs.utility import mpi
 from triqs.atom_diag import *
 from triqs import version
+
+# --------- Parse arguments ----------
+SUPPORTED = []
+args = parse_measure_args(SUPPORTED)
 
 # --------- Construct the AtomDiag Object ----------
 
@@ -29,18 +33,23 @@ name_list = [bl for bl, n_orb in gf_struct]
 block_list = [G_iw_tot[bl][:n_orb, :n_orb] for bl, n_orb in gf_struct]
 G_iw = BlockGf(name_list=name_list, block_list=block_list)
 
-# -------- Save in archive ---------
-if mpi.is_master_node():
-    with HDFArchive("../results/atomdiag.h5",'w') as results:
-        results["G"] = G_iw
+# --------- Collect observables ----------
+obs = {'G': G_iw}
 
-        import inspect
-        import __main__
-        results.create_group("Solver_Info")
-        info_grp = results["Solver_Info"]
-        info_grp["solver_name"] = "atomdiag"
-        # info_grp["solver"] = ad_tot # CAUTION: Large file sizes
-        info_grp["solver_version"] = version.version
-        info_grp["solver_git_hash"] = version.git_hash
-        info_grp["script"] = inspect.getsource(__main__)
-        info_grp["num_threads"] = mpi.size
+# Static observables via trace_rho_op
+rho = atomic_density_matrix(ad_tot, beta)
+density = {}
+nn_ab = {}
+for bl, bl_size in gf_struct:
+    for i in range(bl_size):
+        key = f"{bl}_{i}" if bl_size > 1 else bl
+        density[key] = trace_rho_op(rho, n(bl, i), ad_tot)
+        for bl2, bl2_size in gf_struct:
+            for j in range(bl2_size):
+                key2 = f"{bl2}_{j}" if bl2_size > 1 else bl2
+                nn_ab[f"{key},{key2}"] = trace_rho_op(rho, n(bl, i) * n(bl2, j), ad_tot)
+obs['static_obs'] = {'density': density, 'nn_ab': nn_ab}
+
+# --------- Save ----------
+save_results("../results/atomdiag.h5", "atomdiag", version.version,
+             version.git_hash, **obs)

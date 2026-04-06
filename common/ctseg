@@ -4,14 +4,18 @@ import sys, os, time
 sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
 from model import *
+from save_utils import save_results, parse_measure_args
 
 import numpy as np
 from numpy import linalg
 
-from h5 import HDFArchive
 from triqs.gf import fit_hermitian_tail, Fourier, make_zero_tail
 from triqs.utility import mpi
 from triqs_ctseg import Solver, version
+
+# --------- Parse arguments ----------
+SUPPORTED = []
+args = parse_measure_args(SUPPORTED)
 
 # --------- Construct the CTSEG solver ----------
 constr_params = {
@@ -61,38 +65,36 @@ solve_params = {
         'n_warmup_cycles' : 10000,
         'n_cycles' : 1000000,
         'length_cycle' : 100,
-        "h_loc0": h_loc0
+        "h_loc0": h_loc0,
+        "measure_densities": True,
         }
 start = time.time()
 S.solve(**solve_params)
-end = time.time()
+run_time = time.time() - start
 
 # Rotate back G_tau
 for (bl, g_bl), rot_bl in zip(S.results.G_tau, rot_lst):
     g_bl << rot_bl * g_bl * rot_bl.H
 
+# --------- Collect observables ----------
+G_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
+for bl, l in gf_struct:
+    tail = make_zero_tail(G_iw[bl], 2)
+    tail[1] = np.eye(l)
+    G_iw[bl] << Fourier(S.results.G_tau[bl], tail)
 
-# -------- Save in archive ---------
-if mpi.is_master_node():
-    with HDFArchive("../results/ctseg_new.h5",'w') as results:
-        G_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
-        for bl, l in gf_struct:
-            tail = make_zero_tail(G_iw[bl], 2)
-            tail[1] = np.eye(l)
-            G_iw[bl] << Fourier(S.results.G_tau[bl], tail)
-        results["G"] = G_iw
+obs = {'G': G_iw}
 
-        import inspect
-        import __main__
-        results.create_group("Solver_Info")
-        info_grp = results["Solver_Info"]
-        info_grp["solver_name"] = "triqs_ctseg"
-        info_grp["constr_params"] = constr_params
-        info_grp["solve_params"] = solve_params
-        # info_grp["solver"] = S
-        info_grp["solver_version"] = version.version
-        info_grp["solver_git_hash"] = version.triqs_ctseg_hash
-        info_grp["triqs_git_hash"] = version.triqs_hash
-        info_grp["script"] = inspect.getsource(__main__)
-        info_grp["num_threads"] = mpi.size
-        info_grp["run_time"] = end - start
+# Static observables
+density = {}
+for bl, bl_size in gf_struct:
+    for i in range(bl_size):
+        key = f"{bl}_{i}" if bl_size > 1 else bl
+        density[key] = S.results.densities[bl][i]
+obs['static_obs'] = {'density': density}
+
+# --------- Save ----------
+save_results("../results/ctseg.h5", "triqs_ctseg", version.version,
+             version.triqs_ctseg_hash,
+             constr_params=constr_params, solve_params=solve_params,
+             run_time=run_time, **obs)

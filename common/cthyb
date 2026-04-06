@@ -4,11 +4,15 @@ import sys, os, time
 sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
 from model import *
+from save_utils import save_results, parse_measure_args
 
-from h5 import HDFArchive
 from triqs.utility import mpi
 from triqs_cthyb import Solver, version
 import numpy as np
+
+# --------- Parse arguments ----------
+SUPPORTED = []
+args = parse_measure_args(SUPPORTED)
 
 # --------- Construct the CTHYB solver ----------
 constr_params = {
@@ -28,33 +32,39 @@ solve_params = {
         'n_warmup_cycles' : 10000,
         'n_cycles' : 1000000,
         'length_cycle' : 100,
-        # 'move_double' : True,
-        'measure_pert_order' : True
+        'measure_pert_order' : True,
+        'measure_density_matrix' : True,
         }
 start = time.time()
 S.solve(**solve_params)
-end = time.time()
+run_time = time.time() - start
 
 hist = S.perturbation_order_total.data
 average_k = 1.0 * np.sum(hist * np.arange(hist.shape[0])) / np.sum(hist)
 if mpi.is_master_node(): print("Average perturbation order:", average_k)
 
-# -------- Save in archive ---------
-if mpi.is_master_node():
-    with HDFArchive("../results/cthyb.h5",'w') as results:
-        results["G"] = S.G_iw_raw
+# --------- Collect observables ----------
+obs = {'G': S.G_iw_raw}
 
-        import inspect
-        import __main__
-        results.create_group("Solver_Info")
-        info_grp = results["Solver_Info"]
-        info_grp["solver_name"] = "triqs_cthyb"
-        info_grp["constr_params"] = constr_params
-        info_grp["solve_params"] = solve_params
-        info_grp["solver"] = S
-        info_grp["solver_version"] = version.version
-        info_grp["solver_git_hash"] = version.triqs_cthyb_hash
-        info_grp["triqs_git_hash"] = version.triqs_hash
-        info_grp["script"] = inspect.getsource(__main__)
-        info_grp["num_threads"] = mpi.size
-        info_grp["run_time"] = end - start
+# Static observables from density matrix
+from triqs.atom_diag import trace_rho_op
+rho = S.density_matrix
+h_loc_diag = S.h_loc_diagonalization
+density = {}
+nn_ab = {}
+for bl, bl_size in gf_struct:
+    for i in range(bl_size):
+        key = f"{bl}_{i}" if bl_size > 1 else bl
+        density[key] = trace_rho_op(rho, n(bl, i), h_loc_diag)
+        for bl2, bl2_size in gf_struct:
+            for j in range(bl2_size):
+                key2 = f"{bl2}_{j}" if bl2_size > 1 else bl2
+                nn_ab[f"{key},{key2}"] = trace_rho_op(rho, n(bl, i) * n(bl2, j), h_loc_diag)
+
+obs['static_obs'] = {'density': density, 'nn_ab': nn_ab}
+
+# --------- Save ----------
+save_results("../results/cthyb.h5", "triqs_cthyb", version.version,
+             version.triqs_cthyb_hash,
+             constr_params=constr_params, solve_params=solve_params,
+             run_time=run_time, **obs)

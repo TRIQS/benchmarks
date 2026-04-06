@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 
-
 import sys, os
 sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
 from model import *
 import util
+from save_utils import save_results, parse_measure_args
 
-from h5 import HDFArchive
-from triqs.utility import mpi
 from pyed.TriqsExactDiagonalization import TriqsExactDiagonalization
+
+# --------- Parse arguments ----------
+SUPPORTED = []
+args = parse_measure_args(SUPPORTED)
 
 # --------- Construct the ED solver ----------
 fundamental_operators = util.get_fundamental_operators(h_tot)
@@ -23,6 +25,21 @@ for bl, bl_size in gf_struct:
     for i, j in product(range(bl_size), range(bl_size)):
         ed.set_g2_iwn(G_iw[bl][i,j], c(bl,i), c_dag(bl,j))
 
-# -------- Save in archive ---------
-with HDFArchive("../results/pyed.h5",'w') as res:
-    res["G"] = G_iw
+# --------- Collect observables ----------
+obs = {'G': G_iw}
+
+# Static observables
+density = {}
+nn_ab = {}
+for bl, bl_size in gf_struct:
+    for i in range(bl_size):
+        key = f"{bl}_{i}" if bl_size > 1 else bl
+        density[key] = ed.get_expectation_value(n(bl, i))
+        for bl2, bl2_size in gf_struct:
+            for j in range(bl2_size):
+                key2 = f"{bl2}_{j}" if bl2_size > 1 else bl2
+                nn_ab[f"{key},{key2}"] = ed.get_expectation_value(n(bl, i) * n(bl2, j))
+obs['static_obs'] = {'density': density, 'nn_ab': nn_ab}
+
+# --------- Save ----------
+save_results("../results/pyed.h5", "pyed", "N/A", "N/A", **obs)
