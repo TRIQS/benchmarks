@@ -9,7 +9,7 @@ from save_utils import save_results, parse_measure_args
 from triqs_ctint import Solver, version
 
 # --------- Parse arguments ----------
-SUPPORTED = []
+SUPPORTED = ['chi2', 'chi3']
 args = parse_measure_args(SUPPORTED)
 
 # --------- Auto-detect dynamic interactions from model.py ----------
@@ -52,6 +52,14 @@ solve_params = {
         'measure_densities' : True,
         }
 
+if 'chi2' in args.measure:
+    solve_params['measure_chi2pp_tau'] = True
+    solve_params['measure_chi2ph_tau'] = True
+
+if 'chi3' in args.measure:
+    solve_params['measure_M3pp_iw'] = True
+    solve_params['measure_M3ph_iw'] = True
+
 start = time.time()
 S.solve(**solve_params)
 run_time = time.time() - start
@@ -66,6 +74,29 @@ for bl, bl_size in gf_struct:
         key = f"{bl}_{i}" if bl_size > 1 else bl
         density[key] = S.densities[bl][i]
 obs['static_obs'] = {'density': density}
+
+# chi2 measurement
+if 'chi2' in args.measure:
+    from channels import to_physical_channels_ph, to_physical_channels_pp
+    chi2_d, chi2_m = to_physical_channels_ph(S.chi2ph_iw[('up', 'up')], S.chi2ph_iw[('up', 'dn')])
+    chi2_s, chi2_t = to_physical_channels_pp(S.chi2pp_iw[('up', 'dn')], S.chi2pp_iw[('dn', 'up')])
+    obs.update(chi2_d=chi2_d, chi2_m=chi2_m, chi2_s=chi2_s, chi2_t=chi2_t)
+
+# chi3 measurement (DLR2D NFFT approach)
+if 'chi3' in args.measure:
+    from triqs.gf import make_gf_imfreq, make_gf_dlr2d
+    from channels import to_physical_channels_ph, to_physical_channels_pp
+
+    chi3pp = make_gf_imfreq(make_gf_dlr2d(S.chi3pp_iw_nfft), n_iw)
+    chi3ph = make_gf_imfreq(make_gf_dlr2d(S.chi3ph_iw_nfft), n_iw)
+
+    chi3_d, chi3_m = to_physical_channels_ph(chi3ph[('up', 'up')], chi3ph[('up', 'dn')])
+    chi3_s, chi3_t = to_physical_channels_pp(chi3pp[('up', 'dn')], chi3pp[('dn', 'up')])
+    obs.update(chi3_d=chi3_d, chi3_m=chi3_m, chi3_s=chi3_s, chi3_t=chi3_t)
+
+    # Also store DLR2D compressed representations
+    obs['chi3pp_iw_nfft'] = S.chi3pp_iw_nfft
+    obs['chi3ph_iw_nfft'] = S.chi3ph_iw_nfft
 
 # --------- Save ----------
 save_results("../results/ctint.h5", "triqs_ctint", version.version,
