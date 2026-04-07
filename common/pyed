@@ -10,7 +10,7 @@ from save_utils import save_results, parse_measure_args
 from pyed.TriqsExactDiagonalization import TriqsExactDiagonalization
 
 # --------- Parse arguments ----------
-SUPPORTED = ['chi3', 'chi4']
+SUPPORTED = ['chi3']
 args = parse_measure_args(SUPPORTED)
 
 # --------- Construct the ED solver ----------
@@ -43,13 +43,27 @@ obs['static_obs'] = {'density': density, 'nn_ab': nn_ab}
 
 # chi3 measurement (--measure chi3)
 if 'chi3' in args.measure:
-    print("WARNING: chi3 measurement for pyed not yet implemented. "
-          "Requires porting set_g3_tau + Fourier transform + spin decomposition.")
+    from channels import to_physical_channels_ph, to_physical_channels_pp
 
-# chi4 measurement (--measure chi4)
-if 'chi4' in args.measure:
-    print("WARNING: chi4 measurement for pyed not yet implemented. "
-          "Requires porting set_g4_tau + Fourier transform + spin decomposition.")
+    n_tau_chi3 = 10 * (2 * n_iw + 1)
+    tau_mesh = MeshImTime(beta, 'Fermion', n_tau_chi3)
+
+    chi3pp_tau = Block2Gf_from_struct(mesh=MeshProduct(tau_mesh, tau_mesh), struct=gf_struct)
+    chi3ph_tau = chi3pp_tau.copy()
+
+    for (bl1, bl1_size), (bl2, bl2_size) in product(gf_struct, gf_struct):
+        ed.set_g3_tau(chi3pp_tau[(bl1, bl2)][0,0,0,0],
+                      c_dag(bl1,0), c_dag(bl2,0), c(bl1,0) * c(bl2,0))
+        chi3pp_tau[(bl1, bl2)] *= -1.0  # Operator reordering sign
+        ed.set_g3_tau(chi3ph_tau[(bl1, bl2)][0,0,0,0],
+                      c_dag(bl1,0), c(bl1,0), c_dag(bl2,0) * c(bl2,0))
+
+    chi3pp_iw = Block2Gf_from_fourier2D(chi3pp_tau, n_iw, gf_struct)
+    chi3ph_iw = Block2Gf_from_fourier2D(chi3ph_tau, n_iw, gf_struct)
+
+    chi3_d, chi3_m = to_physical_channels_ph(chi3ph_iw[('up', 'up')], chi3ph_iw[('up', 'dn')])
+    chi3_s, chi3_t = to_physical_channels_pp(chi3pp_iw[('up', 'dn')], chi3pp_iw[('dn', 'up')])
+    obs.update(chi3_d=chi3_d, chi3_m=chi3_m, chi3_s=chi3_s, chi3_t=chi3_t)
 
 # --------- Save ----------
 save_results("../results/pyed.h5", "pyed", "N/A", "N/A", **obs)
