@@ -79,6 +79,7 @@ Not all models symlink all scripts; each model only includes the solvers applica
 - `common/pyed` - Exact diagonalization. Supports `--measure chi3 chi4`.
 - `common/pomerol` - Full exact diagonalization (pomerol2triqs)
 - `common/atomdiag` - Atomic diagonalization (requires `h_tot`, `n_orb_bath`). Supports `--measure G_w`.
+- `common/edipack` - EDIpack exact diagonalization (edipack2triqs, requires `h_tot`, `n_orb_bath`). Supports `--measure G_w chi2`. Provides G(iw), G(w), chi2_d (density), chi2_m (spin).
 - `common/nrg` - NRG via nrgljubljana_interface (requires `w_mesh`)
 - `common/alps_cthyb` - ALPS CT-HYB (via DCore)
 - `common/w2dyn_cthyb` - w2dynamics CT-HYB
@@ -121,6 +122,7 @@ Models with dynamic interactions export descriptors in model.py:
 - triqs_ctint - CT-INT Monte Carlo
 - pyed - Exact diagonalization
 - pomerol - Full ED
+- edipack2triqs - EDIpack ED
 - nrgljubljana - NRG
 - w2dynamics - w2dyn CT-HYB
 - alps_cthyb - ALPS CT-HYB

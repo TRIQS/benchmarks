@@ -8,6 +8,7 @@ models:
       - {solver: pyed, measure: chi3}
       - {solver: pomerol, measure: chi2 chi3}
       - {solver: atomdiag, measure: G_w}
+      - {solver: edipack, measure: G_w chi2}
       - {solver: ctint, measure: chi2 chi3}
       - {solver: cthyb, measure: chi4}
       - alps_cthyb
@@ -17,6 +18,7 @@ models:
       - {solver: pyed, measure: chi3}
       - {solver: pomerol, measure: chi2 chi3}
       - {solver: atomdiag, measure: G_w}
+      - {solver: edipack, measure: G_w chi2}
       - cthyb
       - ctint
       - {solver: ctseg, measure: chi2}
@@ -38,6 +40,7 @@ models:
       - {solver: pyed, measure: chi3}
       - {solver: pomerol, measure: chi2 chi3}
       - {solver: atomdiag, measure: G_w}
+      - {solver: edipack, measure: G_w chi2}
       - cthyb
       - ctint
       - alps_cthyb
@@ -48,6 +51,7 @@ models:
       - {solver: pyed, measure: chi3}
       - {solver: pomerol, measure: chi2 chi3}
       - {solver: atomdiag, measure: G_w}
+      - {solver: edipack, measure: G_w chi2}
       - cthyb
       - ctint
       - {solver: ctseg, measure: chi2}
@@ -59,6 +63,7 @@ models:
       - pyed
       - pomerol
       - {solver: atomdiag, measure: G_w}
+      - {solver: edipack, measure: G_w chi2}
       - ctint
       - alps_cthyb
 
@@ -66,6 +71,7 @@ models:
     runs:
       - pomerol
       - {solver: atomdiag, measure: G_w}
+      - {solver: edipack, measure: G_w chi2}
       - cthyb
       - ctint
       - alps_cthyb
@@ -74,6 +80,7 @@ models:
   Plaquette:
     runs:
       - {solver: atomdiag, measure: G_w}
+      - {solver: edipack, measure: G_w chi2}
       - ctint
 
   Plaquette_Wide_Band:

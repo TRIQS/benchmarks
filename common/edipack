@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+
+import sys, os, time
+sys.path.append(os.getcwd() + "/..")
+sys.path.append(os.getcwd() + "/../../common")
+from model import *
+from save_utils import save_results, parse_measure_args
+
+try:
+    from edipack2triqs.solver import EDIpackSolver, LanczosParams
+except ImportError:
+    print("ERROR: edipack2triqs is not installed.")
+    print("Install it from https://github.com/EDIpack/edipack2triqs")
+    sys.exit(1)
+
+# --------- Parse arguments ----------
+SUPPORTED = ['G_w', 'chi2']
+args = parse_measure_args(SUPPORTED)
+
+# --------- Build fundamental operator lists ----------
+fops_imp_up  = [('up', o) for o in range(n_orb)]
+fops_imp_dn  = [('dn', o) for o in range(n_orb)]
+fops_bath_up = [('up', n_orb + i) for i in range(n_orb_bath)]
+fops_bath_dn = [('dn', n_orb + i) for i in range(n_orb_bath)]
+
+# --------- Construct the EDIpack solver ----------
+S = EDIpackSolver(h_tot, fops_imp_up, fops_imp_dn,
+                  fops_bath_up, fops_bath_dn,
+                  ed_total_ud=True,
+                  lanczos_params=LanczosParams(nstates_total=4**(n_orb)),
+                  verbose=1)
+
+# --------- Solve ----------
+solve_params = {'beta': beta, 'n_iw': n_iw}
+
+if 'G_w' in args.measure and 'w_mesh' in dir():
+    solve_params.update(energy_window=w_window, n_w=n_w, broadening=broadening)
+
+if 'chi2' in args.measure:
+    solve_params.update(chi_spin=True, chi_dens=True)
+
+start = time.time()
+S.solve(**solve_params)
+run_time = time.time() - start
+
+# --------- Collect observables ----------
+obs = {'G': S.g_iw}
+
+# Static observables
+import numpy as np
+density = {}
+nn_ab = {}
+for o in range(n_orb):
+    # Spin-resolved density: m_z = n_up - n_dn, n_tot = n_up + n_dn
+    n_tot = S.densities[o]
+    m_z = S.magnetization[o, 2]
+    n_up = 0.5 * (n_tot + m_z)
+    n_dn = 0.5 * (n_tot - m_z)
+    key_up = f"up_{o}" if n_orb > 1 else "up"
+    key_dn = f"dn_{o}" if n_orb > 1 else "dn"
+    density[key_up] = n_up
+    density[key_dn] = n_dn
+
+    # nn_ab: double occupancy <n_up n_dn> per orbital
+    nn_ab[f"{key_up},{key_dn}"] = S.double_occ[o]
+    nn_ab[f"{key_dn},{key_up}"] = S.double_occ[o]
+    nn_ab[f"{key_up},{key_up}"] = n_up  # <n_up^2> = <n_up> for single site
+    nn_ab[f"{key_dn},{key_dn}"] = n_dn
+
+obs['static_obs'] = {'density': density, 'nn_ab': nn_ab}
+
+# Real-frequency Green function (--measure G_w)
+if 'G_w' in args.measure and 'w_mesh' in dir():
+    obs['G_w'] = S.g_w
+
+# chi2 measurement (--measure chi2)
+if 'chi2' in args.measure:
+    obs['chi2_d'] = S.chi_dens_iw
+    obs['chi2_m'] = S.chi_spin_iw
+
+# --------- Save ----------
+save_results("../results/edipack.h5", "edipack2triqs", "0.11.0", "N/A",
+             solve_params=solve_params, run_time=run_time, **obs)

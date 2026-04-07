@@ -4,3 +4,4 @@
 **/__pycache__/
 benchmark_results.json
 slurm_*.sh
+edipack-*.tmp/
