@@ -4,39 +4,39 @@ defaults:
 models:
   Hubbard_Atom:
     runs:
-      - exact
-      - {solver: pyed, measure: all}
-      - pomerol
+      - {solver: exact, measure: all}
+      - {solver: pyed, measure: chi3}
+      - {solver: pomerol, measure: chi2 chi3}
       - {solver: atomdiag, measure: G_w}
-      - {solver: ctint, measure: chi3}
+      - {solver: ctint, measure: chi2 chi3}
+      - {solver: cthyb, measure: chi4}
       - alps_cthyb
-      - cthyb
 
   SIAM_Discrete_Bath:
     runs:
-      - pyed
-      - pomerol
+      - {solver: pyed, measure: chi3}
+      - {solver: pomerol, measure: chi2 chi3}
       - {solver: atomdiag, measure: G_w}
       - cthyb
       - ctint
-      - ctseg
+      - {solver: ctseg, measure: chi2}
       - w2dyn_cthyb
 
   # SIAM_Discrete_Bath_3Level: model.py not yet created, skipped for now
 
   SIAM_Wide_Band:
-    runs: [cthyb, ctseg, w2dyn_cthyb]
+    runs: [cthyb, {solver: ctseg, measure: chi2}, w2dyn_cthyb]
 
   SIAM_DynU:
-    runs: [ctint, ctseg]
+    runs: [ctint, {solver: ctseg, measure: chi2}]
 
   SIAM_Jperp:
-    runs: [cthyb, ctint, ctseg]
+    runs: [cthyb, ctint, {solver: ctseg, measure: chi2}]
 
   Dimer:
     runs:
-      - pyed
-      - pomerol
+      - {solver: pyed, measure: chi3}
+      - {solver: pomerol, measure: chi2 chi3}
       - {solver: atomdiag, measure: G_w}
       - cthyb
       - ctint
@@ -45,12 +45,12 @@ models:
 
   Dimer_nn:
     runs:
-      - pyed
-      - pomerol
+      - {solver: pyed, measure: chi3}
+      - {solver: pomerol, measure: chi2 chi3}
       - {solver: atomdiag, measure: G_w}
       - cthyb
       - ctint
-      - ctseg
+      - {solver: ctseg, measure: chi2}
       - alps_cthyb
       - w2dyn_cthyb
 
@@ -80,7 +80,7 @@ models:
     runs: [cthyb]
 
   La2CuO4:
-    runs: [cthyb, ctint, ctseg, forktps, w2dyn_cthyb]
+    runs: [cthyb, ctint, {solver: ctseg, measure: chi2}, forktps, w2dyn_cthyb]
     n_mpi_ranks: 16
 
   Sr2RuO4:
