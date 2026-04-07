@@ -4,33 +4,58 @@ import sys, os
 sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
 from model import *
-from save_utils import save_results
+from save_utils import save_results, parse_measure_args
+from channels import to_physical_channels_ph, to_physical_channels_pp
 
 from math import exp
 
-# Exact expressions for partition function, occupation numbers and Green function
-# cf. Eq. (B.3) and (B.4) of S. Pairault, et al., EPJ B 16, 85-105 (2000)
+# --------- Parse arguments ----------
+SUPPORTED = ['chi2', 'chi3']
+args = parse_measure_args(SUPPORTED)
 
-Z = 1. + exp((mu+h)*beta) + exp((mu-h)*beta) + exp((2.*mu-U)*beta)
+# -------- States ---------
+states = ['0', 'up', 'dn', 'updn']
 
+# -------- Eigenenergies ---------
+E = {}
+E['0'] = 0.
+E['up'] = -mu - h
+E['dn'] = -mu + h
+E['updn'] = U - 2.*mu
+
+# -------- Partition function ---------
+Z = sum([exp(-beta*E[i]) for i in states])
+
+# -------- Density-Matrix ---------
+rho = {}
+for s in states:
+    rho[s] = exp(-beta*E[s]) / Z
+
+# -------- Occupation ---------
 density = {}
-density['up'] = ( exp((mu+h)*beta) + exp((2.*mu-U)*beta) ) / Z
-density['dn'] = ( exp((mu-h)*beta) + exp((2.*mu-U)*beta) ) / Z
+density['up'] = rho['up'] + rho['updn']
+density['dn'] = rho['dn'] + rho['updn']
+
+
+# ================ Green Function G_iw ================
+# Eq. (B.3) and (B.4) of S. Pairault, et al., EPJ B 16, 85-105 (2000)
 
 G_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
 
-G_iw['up'] = Gf(mesh=iw_mesh, target_shape=(1,1))
-G_iw['dn'] = Gf(mesh=iw_mesh, target_shape=(1,1))
+G_iw['up'] << (1 - density['dn']) * inverse(iOmega_n + mu + h) + \
+                   density['dn']  * inverse(iOmega_n + mu + h - U)
+G_iw['dn'] << (1 - density['up']) * inverse(iOmega_n + mu - h) + \
+                   density['up']  * inverse(iOmega_n + mu - h - U)
 
-G_iw['up'] << ( 1 - density['dn'] ) * inverse( iOmega_n + mu + h ) + \
-                    density['dn']   * inverse( iOmega_n + mu + h  - U )
-G_iw['dn'] << ( 1 - density['up'] ) * inverse( iOmega_n + mu - h ) + \
-                    density['up']   * inverse( iOmega_n + mu - h  - U )
+# Green function in lambda form (for chi4 expressions)
+G = {'up': lambda iw: (1 - density['dn']) / (iw + mu + h) + density['dn'] / (iw + mu + h - U),
+     'dn': lambda iw: (1 - density['up']) / (iw + mu - h) + density['up'] / (iw + mu - h - U)}
+
 
 # --------- Collect observables ----------
 nn_ab = {
-    'up,dn': exp((2.*mu-U)*beta) / Z,
-    'dn,up': exp((2.*mu-U)*beta) / Z,
+    'up,dn': rho['updn'],
+    'dn,up': rho['updn'],
     'up,up': density['up'],
     'dn,dn': density['dn'],
 }
@@ -38,6 +63,112 @@ obs = {
     'G': G_iw,
     'static_obs': {'density': density, 'nn_ab': nn_ab},
 }
+
+
+# ================ chi3 (Matsubara frequency) ================
+if 'chi3' in args.measure or 'chi2' in args.measure:
+
+    # Lehmann representation helper for chi3
+    # cf. https://hal.archives-ouvertes.fr/tel-01247625v1 Page 217
+    def f3(i, j, k):
+        if abs(rho[k] - rho[i]) < 1e-14:
+            return lambda iw, iwp: (1. / (iwp + E[j] - E[k]) *
+                (rho[i] + rho[j]) / (iw + E[i] - E[j]) +
+                beta * kronecker(iw, -iwp) * rho[i] / (iwp + E[j] - E[i]))
+        else:
+            return lambda iw, iwp: (1. / (iwp + E[j] - E[k]) *
+                ((rho[k] - rho[i]) / (iw + iwp + E[i] - E[k]) +
+                 (rho[i] + rho[j]) / (iw + E[i] - E[j])))
+
+    # chi3_pp(iW, iw) in spin-block notation
+    def chi3pp_func(block, iw, iwp):
+        if block == ('up', 'dn'):
+            return f3('updn', 'dn', '0')(-iw, -iwp) + f3('updn', 'up', '0')(-iwp, -iw)
+        elif block == ('dn', 'up'):
+            return f3('updn', 'up', '0')(-iw, -iwp) + f3('updn', 'dn', '0')(-iwp, -iw)
+        elif block in [('up', 'up'), ('dn', 'dn')]:
+            return 0.
+        else:
+            raise ValueError(f"Invalid block {block}")
+
+    # chi3_ph(iW, iw) in spin-block notation
+    def chi3ph_func(block, iw, iwp):
+        if block == ('up', 'dn'):
+            return f3('updn', 'dn', 'updn')(-iw, iwp) - f3('dn', 'updn', 'dn')(iw, -iwp)
+        elif block == ('dn', 'up'):
+            return f3('updn', 'up', 'updn')(-iw, iwp) - f3('up', 'updn', 'up')(iw, -iwp)
+        elif block == ('up', 'up'):
+            return f3('up', '0', 'up')(-iw, iwp) + f3('updn', 'dn', 'updn')(-iw, iwp)
+        elif block == ('dn', 'dn'):
+            return f3('dn', '0', 'dn')(-iw, iwp) + f3('updn', 'up', 'updn')(-iw, iwp)
+        else:
+            raise ValueError(f"Invalid block {block}")
+
+    # Fill chi3 containers
+    iW_mesh = MeshImFreq(beta, 'Boson', n_iw)
+    chi3pp_iw = Block2Gf_from_struct(mesh=MeshProduct(iW_mesh, iw_mesh), struct=gf_struct)
+    chi3ph_iw = Block2Gf_from_struct(mesh=MeshProduct(iW_mesh, iw_mesh), struct=gf_struct)
+
+    all_blocks = [('up', 'up'), ('up', 'dn'), ('dn', 'dn'), ('dn', 'up')]
+    for iW, iw in chi3pp_iw[('up', 'dn')].mesh:
+        for block in all_blocks:
+            # pp channel: chi3pp(Omega, nu) with nu1=iw, nu2=Omega-iw
+            chi3pp_iw[block][iW, iw] = chi3pp_func(block, iw.value, iW.value - iw.value)
+            # ph channel: chi3ph(Omega, nu) with nu1=iw, nu2=Omega+iw
+            chi3ph_iw[block][iW, iw] = chi3ph_func(block, iw.value, iW.value + iw.value)
+
+    # Convert to physical channels
+    chi3_d, chi3_m = to_physical_channels_ph(chi3ph_iw[('up', 'up')], chi3ph_iw[('up', 'dn')])
+    chi3_s, chi3_t = to_physical_channels_pp(chi3pp_iw[('up', 'dn')], chi3pp_iw[('dn', 'up')])
+    obs.update(chi3_d=chi3_d, chi3_m=chi3_m, chi3_s=chi3_s, chi3_t=chi3_t)
+
+
+# ================ chi2 (Matsubara frequency) ================
+if 'chi2' in args.measure:
+
+    # Lehmann representation helper for chi2
+    def f2(i, j):
+        if abs(E[i] - E[j]) < 1e-14:
+            return lambda iW: beta * rho[i] * (abs(iW) < 1e-14)
+        else:
+            return lambda iW: (rho[j] - rho[i]) / (iW + E[i] - E[j])
+
+    # chi2_pp(iW) in spin-block notation
+    def chi2pp_func(block, iW):
+        if block in [('up', 'dn'), ('dn', 'up')]:
+            return f2('updn', '0')(iW)
+        elif block in [('up', 'up'), ('dn', 'dn')]:
+            return 0.
+        else:
+            raise ValueError(f"Invalid block {block}")
+
+    # chi2_ph(iW) in spin-block notation
+    def chi2ph_func(block, iW):
+        if block in [('up', 'dn'), ('dn', 'up')]:
+            return f2('updn', 'updn')(iW)
+        elif block == ('up', 'up'):
+            return f2('up', 'up')(iW) + f2('updn', 'updn')(iW)
+        elif block == ('dn', 'dn'):
+            return f2('dn', 'dn')(iW) + f2('updn', 'updn')(iW)
+        else:
+            raise ValueError(f"Invalid block {block}")
+
+    # Fill chi2 containers
+    if 'iW_mesh' not in dir():
+        iW_mesh = MeshImFreq(beta, 'Boson', n_iw)
+    chi2pp_iw = Block2Gf_from_struct(mesh=iW_mesh, struct=gf_struct)
+    chi2ph_iw = Block2Gf_from_struct(mesh=iW_mesh, struct=gf_struct)
+
+    for iW in chi2pp_iw[('up', 'dn')].mesh:
+        for block in all_blocks:
+            chi2pp_iw[block][iW] = chi2pp_func(block, iW.value)
+            chi2ph_iw[block][iW] = chi2ph_func(block, iW.value)
+
+    # Convert to physical channels
+    chi2_d, chi2_m = to_physical_channels_ph(chi2ph_iw[('up', 'up')], chi2ph_iw[('up', 'dn')])
+    chi2_s, chi2_t = to_physical_channels_pp(chi2pp_iw[('up', 'dn')], chi2pp_iw[('dn', 'up')])
+    obs.update(chi2_d=chi2_d, chi2_m=chi2_m, chi2_s=chi2_s, chi2_t=chi2_t)
+
 
 # --------- Save ----------
 save_results("../results/exact.h5", "exact", "N/A", "N/A", **obs)

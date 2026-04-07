@@ -20,7 +20,7 @@ has_Jperp = 'Jperp_func' in dir()
 constr_params = {
         'beta' : beta,
         'gf_struct' : gf_struct,
-        'n_iw' : n_iw,
+        'dlr_wmax' : dlr_wmax,
         'n_tau' : 10001
         }
 
@@ -34,7 +34,7 @@ if has_Jperp:
 S = Solver(**constr_params)
 
 # --------- Initialize G0_iw ----------
-S.G0_iw << G0_iw
+S.G0_iw << G0_dlr_iw
 
 # --------- Fill dynamic interactions ----------
 if has_D0:

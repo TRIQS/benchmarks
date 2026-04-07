@@ -25,7 +25,7 @@ models:
   # SIAM_Discrete_Bath_3Level: model.py not yet created, skipped for now
 
   SIAM_Wide_Band:
-    runs: [cthyb, ctint, ctseg, w2dyn_cthyb]
+    runs: [cthyb, ctseg, w2dyn_cthyb]
 
   SIAM_DynU:
     runs: [ctint, ctseg]
@@ -77,7 +77,7 @@ models:
       - ctint
 
   Plaquette_Wide_Band:
-    runs: [cthyb, ctint]
+    runs: [cthyb]
 
   La2CuO4:
     runs: [cthyb, ctint, ctseg, forktps, w2dyn_cthyb]

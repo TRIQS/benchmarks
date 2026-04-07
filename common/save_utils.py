@@ -92,4 +92,4 @@ def save_results(filepath, solver_name, solver_version, solver_git_hash,
             info["run_time"] = run_time
 
         info["script"] = inspect.getsource(__main__)
-        info["num_threads"] = mpi.world.Get_size()
+        info["num_threads"] = mpi.size
