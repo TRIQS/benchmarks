@@ -10,7 +10,7 @@ from save_utils import save_results, parse_measure_args
 from pomerol2triqs import PomerolED
 
 # --------- Parse arguments ----------
-SUPPORTED = []
+SUPPORTED = ['G_w', 'chi2', 'chi3', 'chi4']
 args = parse_measure_args(SUPPORTED)
 
 # --------- Construct the ED solver ----------
@@ -36,18 +36,75 @@ G_iw = ed.G_iw([(bl, idx_lst) for bl, idx_lst in gf_struct], beta, n_iw)
 # --------- Collect observables ----------
 obs = {'G': G_iw}
 
-# Static observables
+# Static observables via ensemble_average (takes index tuples, not operators)
 density = {}
 nn_ab = {}
 for bl, bl_size in gf_struct:
     for i in range(bl_size):
         key = f"{bl}_{i}" if bl_size > 1 else bl
-        density[key] = ed.ensemble_average(n(bl, i))
+        density[key] = ed.ensemble_average((bl, i), (bl, i), beta)
         for bl2, bl2_size in gf_struct:
             for j in range(bl2_size):
                 key2 = f"{bl2}_{j}" if bl2_size > 1 else bl2
-                nn_ab[f"{key},{key2}"] = ed.ensemble_average(n(bl, i) * n(bl2, j))
+                nn_ab[f"{key},{key2}"] = ed.ensemble_average(
+                    (bl, i), (bl2, j), (bl2, j), (bl, i), beta)
 obs['static_obs'] = {'density': density, 'nn_ab': nn_ab}
+
+# Real-frequency Green function (--measure G_w)
+if 'G_w' in args.measure:
+    if 'w_mesh' not in dir():
+        print("ERROR: model.py does not define w_mesh. Cannot compute G_w.")
+        sys.exit(1)
+    obs['G_w'] = ed.G_w([(bl, idx_lst) for bl, idx_lst in gf_struct],
+                        beta, w_window, n_w, broadening)
+
+# chi2 measurement (--measure chi2)
+if 'chi2' in args.measure:
+    from channels import to_physical_channels_ph, to_physical_channels_pp
+
+    # Build chi2_ph from pomerol scalar chi_iw calls
+    chi2_uu = ed.chi_iw(('up', 0), ('up', 0), ('up', 0), ('up', 0), beta, n_iw, True)
+    chi2_ud = ed.chi_iw(('up', 0), ('up', 0), ('dn', 0), ('dn', 0), beta, n_iw, True)
+    chi2_d, chi2_m = to_physical_channels_ph(chi2_uu, chi2_ud)
+    obs['chi2_d'] = chi2_d
+    obs['chi2_m'] = chi2_m
+
+    # Build chi2_pp: chi2_pp_ud and chi2_pp_udc (crossed)
+    chi2_pp_ud = ed.chi_iw(('up', 0), ('dn', 0), ('up', 0), ('dn', 0), beta, n_iw, True)
+    chi2_pp_udc = ed.chi_iw(('dn', 0), ('up', 0), ('up', 0), ('dn', 0), beta, n_iw, True)
+    chi2_s, chi2_t = to_physical_channels_pp(chi2_pp_ud, chi2_pp_udc)
+    obs['chi2_s'] = chi2_s
+    obs['chi2_t'] = chi2_t
+
+n_iw_2p = min(n_iw, 30)  # Frequency box for two-particle quantities
+
+# chi3 measurement (--measure chi3)
+if 'chi3' in args.measure:
+    from channels import to_physical_channels_ph, to_physical_channels_pp
+
+    chi3_params = {'gf_struct': gf_struct, 'beta': beta,
+                   'n_iw': n_iw_2p, 'n_inu': n_iw_2p}
+
+    chi3_ph = ed.chi3_iw_inu(**chi3_params, channel='PH', block_order='AABB')
+    chi3_pp = ed.chi3_iw_inu(**chi3_params, channel='PP', block_order='AABB')
+
+    chi3_d, chi3_m = to_physical_channels_ph(chi3_ph[('up', 'up')], chi3_ph[('up', 'dn')])
+    chi3_s, chi3_t = to_physical_channels_pp(chi3_pp[('up', 'dn')], chi3_pp[('dn', 'up')])
+    obs.update(chi3_d=chi3_d, chi3_m=chi3_m, chi3_s=chi3_s, chi3_t=chi3_t)
+
+# chi4/G2 measurement (--measure chi4)
+if 'chi4' in args.measure:
+    from channels import to_physical_channels_ph, to_physical_channels_pp
+
+    g2_params = {'gf_struct': gf_struct, 'beta': beta,
+                 'n_iw': n_iw_2p, 'n_inu': n_iw_2p}
+
+    G2_ph = ed.G2_iw_inu_inup(**g2_params, channel='PH', block_order='AABB')
+    G2_pp = ed.G2_iw_inu_inup(**g2_params, channel='PP', block_order='AABB')
+
+    chi4_d, chi4_m = to_physical_channels_ph(G2_ph[('up', 'up')], G2_ph[('up', 'dn')])
+    chi4_s, chi4_t = to_physical_channels_pp(G2_pp[('up', 'dn')], G2_pp[('dn', 'up')])
+    obs.update(chi4_d=chi4_d, chi4_m=chi4_m, chi4_s=chi4_s, chi4_t=chi4_t)
 
 # --------- Save ----------
 save_results("../results/pomerol.h5", "pomerol", "N/A", "N/A", **obs)
