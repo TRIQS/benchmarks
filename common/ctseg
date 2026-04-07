@@ -14,7 +14,7 @@ from triqs.utility import mpi
 from triqs_ctseg import Solver, version
 
 # --------- Parse arguments ----------
-SUPPORTED = []
+SUPPORTED = ['chi2']
 args = parse_measure_args(SUPPORTED)
 
 # --------- Auto-detect dynamic interactions from model.py ----------
@@ -94,6 +94,11 @@ solve_params = {
         "h_loc0": h_loc0,
         "measure_densities": True,
         }
+
+if 'chi2' in args.measure:
+    solve_params['measure_nn_tau'] = True
+    solve_params['measure_Sperp_tau'] = True
+
 start = time.time()
 S.solve(**solve_params)
 run_time = time.time() - start
@@ -118,6 +123,24 @@ for bl, bl_size in gf_struct:
         key = f"{bl}_{i}" if bl_size > 1 else bl
         density[key] = S.results.densities[bl][i]
 obs['static_obs'] = {'density': density}
+
+# chi2 measurement (density-density correlator)
+if 'chi2' in args.measure:
+    from channels import to_physical_channels_ph
+
+    # Fourier transform nn_tau blocks to Matsubara
+    nn_tau = S.results.nn_tau
+    iW_mesh = MeshImFreq(beta, 'Boson', n_iw)
+    nn_iw_blocks = {}
+    for bl, nn_bl in nn_tau:
+        nn_iw_bl = Gf(mesh=iW_mesh, target_shape=nn_bl.target_shape)
+        nn_iw_bl << Fourier(nn_bl)
+        nn_iw_blocks[bl] = nn_iw_bl
+
+    chi2_d, chi2_m = to_physical_channels_ph(nn_iw_blocks[('up', 'up')],
+                                              nn_iw_blocks[('up', 'dn')])
+    obs['chi2_d'] = chi2_d
+    obs['chi2_m'] = chi2_m
 
 # --------- Save ----------
 save_results("../results/ctseg.h5", "triqs_ctseg", version.version,

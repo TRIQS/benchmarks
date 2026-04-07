@@ -11,7 +11,7 @@ from triqs_cthyb import Solver, version
 import numpy as np
 
 # --------- Parse arguments ----------
-SUPPORTED = []
+SUPPORTED = ['chi4']
 args = parse_measure_args(SUPPORTED)
 
 # --------- Auto-detect dynamic interactions from model.py ----------
@@ -82,6 +82,14 @@ solve_params = {
 if has_Jperp:
     solve_params['h_loc0'] = h_loc0
 
+if 'chi4' in args.measure:
+    solve_params['measure_G2_iw_ph'] = True
+    solve_params['measure_G2_iw_pp'] = True
+    solve_params['measure_G2_n_bosonic'] = 30
+    solve_params['measure_G2_n_fermionic'] = 30
+    solve_params['measure_G2_blocks'] = set([("up", "up"), ("up", "dn")])
+    solve_params['measure_G2_block_order'] = "AABB"
+
 start = time.time()
 S.solve(**solve_params)
 run_time = time.time() - start
@@ -109,6 +117,13 @@ for bl, bl_size in gf_struct:
                 nn_ab[f"{key},{key2}"] = trace_rho_op(rho, n(bl, i) * n(bl2, j), h_loc_diag)
 
 obs['static_obs'] = {'density': density, 'nn_ab': nn_ab}
+
+# chi4/G2 measurement
+if 'chi4' in args.measure:
+    from channels import to_physical_channels_ph, to_physical_channels_pp
+    chi4_d, chi4_m = to_physical_channels_ph(S.G2_iw_ph[('up', 'up')], S.G2_iw_ph[('up', 'dn')])
+    chi4_s, chi4_t = to_physical_channels_pp(S.G2_iw_pp[('up', 'dn')], S.G2_iw_pp[('dn', 'up')])
+    obs.update(chi4_d=chi4_d, chi4_m=chi4_m, chi4_s=chi4_s, chi4_t=chi4_t)
 
 # --------- Save ----------
 save_results("../results/cthyb.h5", "triqs_cthyb", version.version,
