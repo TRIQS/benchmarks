@@ -6,3 +6,4 @@ benchmark_results.json
 slurm_*.sh
 edipack-*.tmp/
 *.dat
+jupytext.toml

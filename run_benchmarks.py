@@ -22,6 +22,21 @@ import time
 import yaml
 
 
+def check_triqs_env():
+    """Verify that the TRIQS environment is properly set up."""
+    triqs_root = os.environ.get('TRIQS_ROOT')
+    if not triqs_root:
+        print("Warning: TRIQS_ROOT not set. Source triqsvars.sh first:")
+        print("  source ~/opt/triqs/share/triqs/triqsvars.sh")
+        sys.exit(1)
+    triqs_lib = os.path.join(triqs_root, 'lib')
+    ld_path = os.environ.get('LD_LIBRARY_PATH', '')
+    if triqs_lib not in ld_path.split(':'):
+        print(f"Warning: {triqs_lib} not in LD_LIBRARY_PATH. Source triqsvars.sh first:")
+        print(f"  source {triqs_root}/share/triqs/triqsvars.sh")
+        sys.exit(1)
+
+
 def load_config(config_path='benchmark_config.yaml'):
     with open(config_path) as f:
         return yaml.safe_load(f)
@@ -151,6 +166,7 @@ def main():
                         help="Config file path")
     args = parser.parse_args()
 
+    check_triqs_env()
     config = load_config(args.config)
     defaults = config.get('defaults', {})
     default_ranks = defaults.get('n_mpi_ranks', 4)
