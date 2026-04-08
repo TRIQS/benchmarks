@@ -41,7 +41,7 @@ Models
 |---|---|
 | **Hubbard_Atom** | Single site with Coulomb repulsion, chemical potential, and Zeeman field |
 | **SIAM_Discrete_Bath** | Single impurity Anderson model coupled to discrete bath levels |
-| **SIAM_Wide_Band** | Single impurity Anderson model with semicircular (wide-band) hybridization |
+| **SIAM_SemiCircular** | Single impurity Anderson model with semicircular hybridization |
 | **SIAM_DynU** | SIAM with dynamic density-density interaction $D_0(i\omega)$ |
 | **SIAM_Jperp** | SIAM with dynamic spin-spin interaction $J_\perp(i\omega)$ |
 | **Dimer** | Two-orbital Kanamori impurity coupled to discrete bath |
@@ -49,7 +49,7 @@ Models
 | **Dimer_SOC** | Two-orbital impurity with spin-orbit coupling (single spin-orbital block) |
 | **Trimer** | Three-orbital Kanamori impurity coupled to discrete bath |
 | **Plaquette** | Four-site cluster with Kanamori interaction and discrete bath |
-| **Plaquette_Wide_Band** | Four-site cluster with wide-band hybridization |
+| **Plaquette_SemiCircular** | Four-site cluster with semicircular hybridization |
 | **Sr2RuO4** | Three-band model for Sr$_2$RuO$_4$ from Wannier90 |
 | **Sr2RuO4_SOC** | Three-band Sr$_2$RuO$_4$ with spin-orbit coupling |
 | **La2CuO4** | Single-band model for La$_2$CuO$_4$ from Wannier90 |

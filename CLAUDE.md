@@ -36,7 +36,7 @@ Each model contains:
 - `results/` - HDF5 archives with solver output (ignored on dev branches via .gitignore)
 - `notebook.ipynb` + `notebook.py` - Analysis and comparison (jupytext paired)
 
-Models: Hubbard_Atom, SIAM_Discrete_Bath, SIAM_Wide_Band, SIAM_DynU, SIAM_Jperp, Dimer, Dimer_nn, Dimer_SOC, Trimer, Sr2RuO4, Sr2RuO4_SOC, La2CuO4, Plaquette, Plaquette_Wide_Band
+Models: Hubbard_Atom, SIAM_Discrete_Bath, SIAM_SemiCircular, SIAM_DynU, SIAM_Jperp, Dimer, Dimer_nn, Dimer_SOC, Trimer, Sr2RuO4, Sr2RuO4_SOC, La2CuO4, Plaquette, Plaquette_SemiCircular
 
 ### Solver Scripts Pattern
 All solver scripts follow the same structure:
@@ -89,7 +89,7 @@ Not all models symlink all scripts; each model only includes the solvers applica
 - `Hubbard_Atom/scripts/exact` - Analytical solution for Hubbard atom
 - `Sr2RuO4/scripts/cthyb_truncated` - CT-HYB with full Hilbert space
 - `Sr2RuO4/scripts/cthyb_truncation_benchmark` - Truncation level benchmarks
-- `Plaquette_Wide_Band/scripts/cthyb_truncation_benchmark` - Truncation benchmarks
+- `Plaquette_SemiCircular/scripts/cthyb_truncation_benchmark` - Truncation benchmarks
 
 ### Dynamic Interactions
 Models with dynamic interactions export descriptors in model.py:
