@@ -52,3 +52,55 @@ def Block2Gf_from_fourier2D(G_tau, n_iw, struct):
 def kronecker(iw, iwp):
     """Kronecker delta for Matsubara frequencies."""
     return iw == iwp
+
+
+def make_gf_dlr_iw(*G_iw_list, dlr_eps=1e-10, wmax_init=1.0, wmax_max=200.0, fit_eps_factor=0.1):
+    """Find optimal DLR wmax and return DLR representations of the input Green functions.
+
+    Takes one or more BlockGf on MeshImFreq (typically G0_iw, Delta_iw).
+    Returns (*G_dlr_iw_list, dlr_wmax) -- DLR BlockGfs + the determined wmax.
+
+    The wmax is determined by gradually increasing it until the DLR round-trip
+    of the first argument (G0_iw) reproduces the original within dlr_eps.
+    A tighter eps (dlr_eps * fit_eps_factor) is used for DLR basis construction.
+    """
+    import numpy as np
+    from triqs.gf import Gf, MeshDLRImFreq, make_gf_dlr, make_gf_imfreq
+
+    G0_iw = G_iw_list[0]
+    mesh = G0_iw.mesh
+    beta = mesh.beta
+    statistic = str(mesh.statistic)
+    n_iw = len(mesh) // 2
+    fit_eps = dlr_eps * fit_eps_factor
+
+    wmax = wmax_init
+    while wmax <= wmax_max:
+        dlr_mesh = MeshDLRImFreq(beta, statistic, wmax, fit_eps, True)
+
+        # Check DLR round-trip accuracy on G0_iw
+        max_err = 0.0
+        for bl, g_bl in G0_iw:
+            g_dlr_iw = Gf(mesh=dlr_mesh, target_shape=g_bl.target_shape)
+            for w in dlr_mesh:
+                g_dlr_iw[w] = g_bl(w)
+            g_dlr = make_gf_dlr(g_dlr_iw)
+            g_rec = make_gf_imfreq(g_dlr, n_iw)
+            err = np.max(np.abs(g_rec.data - g_bl.data))
+            max_err = max(max_err, err)
+
+        if max_err < dlr_eps:
+            # Build DLR GFs for all inputs on the converged mesh
+            results = []
+            for G_iw in G_iw_list:
+                G_dlr = BlockGf(mesh=dlr_mesh, gf_struct=[(bl, g.target_shape[0]) for bl, g in G_iw])
+                for bl, g_bl in G_iw:
+                    for w in dlr_mesh:
+                        G_dlr[bl][w] = g_bl(w)
+                results.append(G_dlr)
+            results.append(wmax)
+            return tuple(results)
+
+        wmax *= 1.5
+
+    raise RuntimeError(f"make_gf_dlr_iw: could not find suitable wmax <= {wmax_max} for dlr_eps={dlr_eps}")
