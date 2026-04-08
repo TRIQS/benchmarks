@@ -2,7 +2,7 @@ import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *
 
-from triqs.gf import Gf, MeshImFreq, MeshDLRImFreq, MeshReFreq, BlockGf, iOmega_n, inverse
+from triqs.gf import Gf, MeshImFreq, MeshDLRImFreq, MeshReFreq, MeshReFreqPts, MeshReFreqLog, BlockGf, Omega, iOmega_n, inverse
 from triqs.operators import c, c_dag, n
 from numpy import array, matrix
 
@@ -55,16 +55,20 @@ dlr_iw_mesh = MeshDLRImFreq(beta, 'Fermion', dlr_wmax, dlr_eps, True)
 n_w = 3001
 w_window = (-10, 10)
 w_mesh = MeshReFreq(window=w_window, n_w=n_w)
-broadening = 0.1
+broadening = 1e-3
 
 # ==== Non-Interacting Green function and Hybridization (zero for isolated cluster) ====
-def make_gf(mesh):
+def make_g0_and_delta(mesh):
+    if type(mesh) in [MeshReFreq, MeshReFreqPts, MeshReFreqLog]:
+        z = Omega + 1j * broadening
+    else:
+        z = iOmega_n
     G0 = BlockGf(mesh=mesh, gf_struct=gf_struct)
     for bl, g_bl in G0:
-        g_bl << inverse(iOmega_n - h_0_mat)
+        g_bl << inverse(z - h_0_mat)
     Delta = BlockGf(mesh=mesh, gf_struct=gf_struct)
     Delta << 0.0
     return G0, Delta
 
-G0_iw, Delta_iw = make_gf(iw_mesh)
-G0_dlr_iw, Delta_dlr = make_gf(dlr_iw_mesh)
+G0_iw, Delta_iw = make_g0_and_delta(iw_mesh)
+G0_dlr_iw, Delta_dlr = make_g0_and_delta(dlr_iw_mesh)

@@ -23,11 +23,12 @@ models:
       - ctint
       - {solver: ctseg, measure: chi2}
       - w2dyn_cthyb
+      - nrg
 
   # SIAM_Discrete_Bath_3Level: model.py not yet created, skipped for now
 
   SIAM_Wide_Band:
-    runs: [cthyb, {solver: ctseg, measure: chi2}, w2dyn_cthyb]
+    runs: [cthyb, {solver: ctseg, measure: chi2}, w2dyn_cthyb, nrg]
 
   SIAM_DynU:
     runs: [ctint, {solver: ctseg, measure: chi2}]

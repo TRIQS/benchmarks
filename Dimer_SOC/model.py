@@ -2,7 +2,7 @@ import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *
 
-from triqs.gf import Gf, MeshImFreq, MeshDLRImFreq, MeshReFreq, iOmega_n, inverse
+from triqs.gf import Gf, MeshImFreq, MeshDLRImFreq, MeshReFreq, MeshReFreqPts, MeshReFreqLog, Omega, iOmega_n, inverse
 from triqs.operators import c, c_dag, n
 from triqs.operators.util.hamiltonians import h_int_kanamori
 from itertools import product
@@ -84,17 +84,22 @@ dlr_iw_mesh = MeshDLRImFreq(beta, 'Fermion', dlr_wmax, dlr_eps, True)
 n_w = 3001
 w_window = (-10, 10)
 w_mesh = MeshReFreq(window=w_window, n_w=n_w)
-broadening = 0.1
+broadening = 1e-3
 
 # ==== Non-Interacting Impurity Green function and Hybridization ====
-# FIXME Delta['bl'] << V_mat * inverse(iOmega_n - h_bath_mat) * V_mat.transpose()
-def make_gf(mesh):
+def make_g0_and_delta(mesh):
+    if type(mesh) in [MeshReFreq, MeshReFreqPts, MeshReFreqLog]:
+        z = Omega + 1j * broadening
+    else:
+        z = iOmega_n
+    real_freq = type(mesh) in [MeshReFreq, MeshReFreqPts, MeshReFreqLog]
     Delta = BlockGf(mesh=mesh, gf_struct=gf_struct)
-    for iw in mesh:
-        Delta['bl'][iw] = V_mat * inv(iw.value * eye(n_orb) - h_bath_mat) * V_mat.transpose()
+    for w in mesh:
+        zv = w.value + 1j * broadening if real_freq else w.value
+        Delta['bl'][w] = V_mat * inv(zv * eye(n_orb) - h_bath_mat) * V_mat.transpose()
     G0 = Delta.copy()
-    G0['bl'] << inverse(iOmega_n - h_0_mat - Delta['bl'])
+    G0['bl'] << inverse(z - h_0_mat - Delta['bl'])
     return G0, Delta
 
-G0_iw, Delta_iw = make_gf(iw_mesh)
-G0_dlr_iw, Delta_dlr = make_gf(dlr_iw_mesh)
+G0_iw, Delta_iw = make_g0_and_delta(iw_mesh)
+G0_dlr_iw, Delta_dlr = make_g0_and_delta(dlr_iw_mesh)

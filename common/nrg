@@ -1,76 +1,85 @@
 #!/usr/bin/env python
 
-import sys, os
+import sys, os, time
 sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
 from model import *
 from save_utils import save_results, parse_measure_args
 
 try:
-    from nrgljubljana_interface import Solver, MeshReFreqPts, version
+    from nrgljubljana_interface import Solver, version
 except ImportError:
-    print("ERROR: nrgljubljana_interface is not installed.")
+    print("ERROR: nrgljubljana_interface not installed.")
     print("Install it from https://github.com/TRIQS/nrgljubljana_interface")
     sys.exit(1)
 
-from triqs.utility import mpi
-
 # --------- Parse arguments ----------
-SUPPORTED = []
+SUPPORTED = ['chi2']
 args = parse_measure_args(SUPPORTED)
 
-# --------- Check model compatibility ----------
-if 'w_mesh' not in dir():
-    print("ERROR: model.py does not define w_mesh (MeshReFreq). Required for NRG.")
-    sys.exit(1)
+# --------- Determine symmetry type from model parameters ----------
+use_qsz = abs(h) > 1e-10 if 'h' in dir() else False
+symtype = 'QSZ' if use_qsz else 'QS'
 
 # --------- Construct the NRG solver ----------
 constr_params = {
-        'beta' : beta,
-        'gf_struct' : gf_struct,
-        'n_iw' : n_iw,
-        }
+    'model': 'SIAM', 'symtype': symtype,
+    'mesh_max': 10.0, 'mesh_min': 1e-5, 'mesh_ratio': 1.05,
+}
 S = Solver(**constr_params)
+S.set_nrg_params(bins=50)
 
-# --------- Initialize G0_iw ----------
-S.G0_iw << G0_iw
+# --------- Get hybridization from model ----------
+_, Delta_w = make_g0_and_delta(S.Delta_w.mesh)
 
-# --------- Solve! ----------
-import time
+# Fill solver's Delta_w (QS: single block 'imp', QSZ: 'up'/'dn')
+if symtype == 'QS':
+    S.Delta_w['imp'] << Delta_w[block_names[0]]
+else:
+    for bl in S.Delta_w.indices:
+        S.Delta_w[bl] << Delta_w[bl]
+
+# --------- Map model parameters to NRG convention ----------
+mp = {'U1': U, 'eps1': -mu}
+if use_qsz:
+    mp['B1'] = h
+
+# --------- Solve ----------
 solve_params = {
-        'h_int' : h_int,
-        'model' : 'SIAM',  # default for single-impurity models
-        }
-
+    'T': 1.0 / beta, 'Lambda': 4.0, 'Nz': 2,
+    'Tmin': 1e-4, 'keep': 200, 'keepenergy': 10.0,
+    'model_parameters': mp,
+}
 start = time.time()
 S.solve(**solve_params)
 run_time = time.time() - start
 
 # --------- Collect observables ----------
-obs = {}
+from triqs.gf import BlockGf
 
-# Real-frequency Green function
-if hasattr(S, 'G_w'):
-    obs['G_w'] = S.G_w
-    # Spectral function A(w) = -1/pi * Im G^R(w)
-    # (can be derived in notebook, but store for convenience)
-
-# Matsubara Green function (if available)
-if hasattr(S, 'G_iw'):
-    obs['G'] = S.G_iw
+# Remap G_w blocks to model convention
+if symtype == 'QS':
+    obs = {'G_w': BlockGf(name_list=block_names,
+                          block_list=[S.G_w['imp']] * len(block_names))}
+else:
+    obs = {'G_w': S.G_w}
 
 # Static observables
-if hasattr(S, 'expv'):
-    density = {}
-    for bl, bl_size in gf_struct:
-        for i in range(bl_size):
-            key = f"{bl}_{i}" if bl_size > 1 else bl
-            # NRG expv keys depend on the model template
-            nkey = f"n_d_{bl}" if bl_size == 1 else f"n_d_{bl}_{i}"
-            if nkey in S.expv:
-                density[key] = S.expv[nkey]
-    if density:
-        obs['static_obs'] = {'density': density}
+density = {}
+if symtype == 'QSZ':
+    density['up'] = S.expv['n_d_u']
+    density['dn'] = S.expv['n_d_d']
+else:
+    for bl in block_names:
+        density[bl] = S.expv['n_d'] / 2
+obs['static_obs'] = {'density': density}
+
+# chi2 susceptibilities (real-frequency)
+if 'chi2' in args.measure:
+    if hasattr(S, 'chi_NN_w') and S.chi_NN_w is not None:
+        obs['chi2_d'] = S.chi_NN_w
+    if hasattr(S, 'chi_SS_w') and S.chi_SS_w is not None:
+        obs['chi2_m'] = S.chi_SS_w
 
 # --------- Save ----------
 save_results("../results/nrg.h5", "nrgljubljana", version.version,

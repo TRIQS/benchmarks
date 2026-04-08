@@ -5,7 +5,7 @@ import numpy as np
 
 sys.path.append(os.getcwd() + '/../common')
 
-from triqs.gf import BlockGf, MeshImFreq, MeshDLRImFreq, MeshReFreq, Omega, iOmega_n, inverse, MeshBrZone, MeshProduct
+from triqs.gf import BlockGf, MeshImFreq, MeshDLRImFreq, MeshReFreq, MeshReFreqPts, MeshReFreqLog, Omega, iOmega_n, inverse, MeshBrZone, MeshProduct
 from triqs.lattice import BrillouinZone
 from triqs.operators import c, c_dag
 from triqs.operators.util import h_int_kanamori, U_matrix_kanamori
@@ -16,7 +16,7 @@ from triqs.lattice.utils import TB_from_wannier90
 # ==== System Parameters ====
 beta = 25.0  # Inverse temperature
 mu = 12.79  # Chemical potential
-eta = 2e-1
+broadening = 1e-3
 
 U = 3.6  # Density-density interaction
 
@@ -59,26 +59,31 @@ k_mesh = MeshBrZone(TBL.bz, n_k)
 e_k = TBL.fourier(k_mesh)[0:n_orb, 0:n_orb]
 mu_mat = mu * np.eye(n_orb)
 dc_mat = 1.9 * np.eye(n_orb)
-eta_mat = 1j * eta * np.eye(n_orb)
 
 # ==== Matsubara Green function and Hybridization ====
 dlr_wmax = 2*U
 dlr_eps = 1e-10
 dlr_iw_mesh = MeshDLRImFreq(beta, 'Fermion', dlr_wmax, dlr_eps, True)
 
-def make_gf(mesh):
-    iw_vec = np.array([iw.value * np.eye(n_orb) for iw in mesh])
+def make_g0_and_delta(mesh):
+    real_freq = type(mesh) in [MeshReFreq, MeshReFreqPts, MeshReFreqLog]
+    if real_freq:
+        z = Omega + 1j * broadening
+        z_vec = np.array([(w.value + 1j * broadening) * np.eye(n_orb) for w in mesh])
+    else:
+        z = iOmega_n
+        z_vec = np.array([w.value * np.eye(n_orb) for w in mesh])
     G0 = BlockGf(mesh=mesh, gf_struct=gf_struct)
     for s in block_names:
-        G0_k = linalg.inv(iw_vec[None, ...] + mu_mat[None, None, ...] - e_k.data[::, None, ...])
+        G0_k = linalg.inv(z_vec[None, ...] + mu_mat[None, None, ...] - e_k.data[::, None, ...])
         G0[s].data[:] = np.sum(G0_k, axis=0) / len(k_mesh)
     Delta = G0.copy()
-    Delta['up'] << iOmega_n + mu_mat - h_0_mat - inverse(G0['up'])
-    Delta['dn'] << iOmega_n + mu_mat - h_0_mat - inverse(G0['dn'])
+    Delta['up'] << z + mu_mat - h_0_mat - inverse(G0['up'])
+    Delta['dn'] << z + mu_mat - h_0_mat - inverse(G0['dn'])
     return G0, Delta
 
-G0_iw, Delta_iw = make_gf(iw_mesh)
-G0_dlr_iw, Delta_dlr = make_gf(dlr_iw_mesh)
+G0_iw, Delta_iw = make_g0_and_delta(iw_mesh)
+G0_dlr_iw, Delta_dlr = make_g0_and_delta(dlr_iw_mesh)
 
 # ==== k-resolved Green function ====
 k_iw_mesh = MeshProduct(k_mesh, iw_mesh)
@@ -88,14 +93,11 @@ for s in block_names:
     G0_k_iw[s].data[:] = linalg.inv(iw_vec[None, ...] + mu_mat[None, None, ...] - e_k.data[::, None, ...])
 
 # ==== Real-frequency Green function ====
+eta_mat = 1j * broadening * np.eye(n_orb)
 k_w_mesh = MeshProduct(k_mesh, w_mesh)
 G0_k_w = BlockGf(mesh=k_w_mesh, gf_struct=gf_struct)
-G0_w = BlockGf(mesh=w_mesh, gf_struct=gf_struct)
 w_vec = np.array([w.value * np.eye(n_orb) for w in w_mesh])
 for s in block_names:
     G0_k_w[s].data[:] = linalg.inv(w_vec[None, ...] + mu_mat[None, None, ...] - e_k.data[::, None, ...] + eta_mat[None, None, ...])
-    G0_w[s].data[:] = np.sum(G0_k_w[s].data[:], axis=0) / len(k_mesh)
 
-Delta_w = G0_w.copy()
-Delta_w['up'] << Omega + mu_mat + eta_mat - h_0_mat - inverse(G0_w['up'])
-Delta_w['dn'] << Omega + mu_mat + eta_mat - h_0_mat - inverse(G0_w['dn'])
+G0_w, Delta_w = make_g0_and_delta(w_mesh)

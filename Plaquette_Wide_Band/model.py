@@ -2,7 +2,8 @@ import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *
 
-from triqs.gf import Gf, MeshImFreq, BlockGf, iOmega_n, inverse
+from triqs.gf import Gf, MeshImFreq, MeshDLRImFreq, MeshReFreq, MeshReFreqPts, MeshReFreqLog, BlockGf, Omega, iOmega_n, inverse
+from triqs.gf.descriptors import Function
 from triqs.operators import c, c_dag, n
 from numpy import array, sign, eye, matrix
 
@@ -39,17 +40,31 @@ h_0 = sum(c_dag_vec[s] * h_0_mat * c_vec[s] for s in block_names)[0, 0]
 
 h_imp = h_0 + h_int
 
+# ==== Total Hamiltonian (isolated cluster + wide-band bath) ====
+h_tot = h_imp
+
 # ==== Green function structure ====
 gf_struct = [(s, n_orb) for s in block_names]
 
-# ==== Hybridization Function (wide-band limit: -i*Gamma*sign(w)) ====
+# ==== Frequency Meshes ====
 iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
-Delta_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
-for bl in block_names:
-    for iw in Delta_iw[bl].mesh:
-        Delta_iw[bl][iw] = -1j * Gamma * sign(iw.imag) * eye(n_orb)
+dlr_wmax = 2 * U
+dlr_eps = 1e-10
+dlr_iw_mesh = MeshDLRImFreq(beta, 'Fermion', dlr_wmax, dlr_eps, True)
 
-# ==== Non-Interacting Green function ====
-G0_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
-for bl in block_names:
-    G0_iw[bl] << inverse(iOmega_n - h_0_mat - Delta_iw[bl])
+# ==== Non-Interacting Green function and Hybridization (wide-band limit) ====
+def make_g0_and_delta(mesh):
+    Delta = BlockGf(mesh=mesh, gf_struct=gf_struct)
+    if type(mesh) in [MeshReFreq, MeshReFreqPts, MeshReFreqLog]:
+        z = Omega
+        Delta << -1j * Gamma
+    else:
+        z = iOmega_n
+        Delta << Function(lambda w: -1j * Gamma * sign(w.value.imag))
+    G0 = BlockGf(mesh=mesh, gf_struct=gf_struct)
+    for bl in block_names:
+        G0[bl] << inverse(z - h_0_mat - Delta[bl])
+    return G0, Delta
+
+G0_iw, Delta_iw = make_g0_and_delta(iw_mesh)
+G0_dlr_iw, Delta_dlr = make_g0_and_delta(dlr_iw_mesh)
