@@ -11,7 +11,19 @@ import numpy as np
 from numpy import matrix, array, diag, pi
 import numpy.linalg as linalg
 
-from tight_binding_model import *
+from triqs.lattice.utils import TB_from_wannier90
+
+# order is xy_up, xz_up, yz_up, xy_dn, xz_dn, yz_dn
+def lambda_matrix(lam_xy, lam_z):
+    lam_loc = np.zeros((6,6), dtype=complex)
+    lam_loc[0,4] =  1j*lam_xy/2.0
+    lam_loc[0,5] =     lam_xy/2.0
+    lam_loc[1,2] =  1j*lam_z/2.0
+    lam_loc[1,3] = -1j*lam_xy/2.0
+    lam_loc[2,3] =    -lam_xy/2.0
+    lam_loc[4,5] = -1j*lam_z/2.0
+    lam_loc = lam_loc + np.transpose(np.conjugate(lam_loc))
+    return lam_loc
 
 # ==== System Parameters ====
 beta = 25.                      # Inverse temperature
@@ -30,7 +42,12 @@ idx_lst = list(range(len(block_names) * len(orb_names)))
 n_idx = len(idx_lst)
 gf_struct = [('bl', n_idx)]
 
-TBL = tight_binding_model(lambda_soc=SOC)   # The Tight-Binding Lattice
+paths = [os.getcwd(), os.path.dirname(__file__)]
+for p in paths:
+    if os.path.isfile(p + '/w2w_hr.dat'):
+        path = p
+        break
+TBL = TB_from_wannier90(seed='/w2w', path=path, extend_to_spin=True, add_local=lambda_matrix(SOC, SOC))
 TBL.bz = BrillouinZone(TBL.bl)
 
 
