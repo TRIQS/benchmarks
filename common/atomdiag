@@ -58,7 +58,7 @@ if 'G_w' in args.measure:
     if 'broadening' not in dir():
         print("ERROR: model.py does not define broadening. Cannot compute G_w.")
         sys.exit(1)
-    G_w_tot = atomic_g_w(ad_tot, beta, gf_struct_tot, w_mesh, broadening)
+    G_w_tot = atomic_g_w(ad_tot, beta, gf_struct_tot, w_window, n_w, broadening)
     block_list_w = [G_w_tot[bl][:n_orb, :n_orb] for bl, n_orb in gf_struct]
     obs['G_w'] = BlockGf(name_list=name_list, block_list=block_list_w)
 

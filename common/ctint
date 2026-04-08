@@ -21,6 +21,7 @@ constr_params = {
         'beta' : beta,
         'gf_struct' : gf_struct,
         'dlr_wmax' : dlr_wmax,
+        'dlr_eps' : G0_dlr_iw.mesh.eps,
         'n_tau' : 10001
         }
 

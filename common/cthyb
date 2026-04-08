@@ -8,6 +8,7 @@ from save_utils import save_results, parse_measure_args
 
 from triqs.utility import mpi
 from triqs_cthyb import Solver, version
+from triqs_cthyb.solver_core import block_order
 import numpy as np
 
 # --------- Parse arguments ----------
@@ -29,7 +30,6 @@ constr_params = {
 
 if has_Jperp:
     constr_params['delta_interface'] = True
-    constr_params['n_tau_bosonic'] = n_tau_bosonic
 
 S = Solver(**constr_params)
 
@@ -77,6 +77,7 @@ solve_params = {
         'length_cycle' : 100,
         'measure_pert_order' : True,
         'measure_density_matrix' : True,
+        'use_norm_as_weight' : True,
         }
 
 if has_Jperp:
@@ -88,7 +89,7 @@ if 'chi4' in args.measure:
     solve_params['measure_G2_n_bosonic'] = 30
     solve_params['measure_G2_n_fermionic'] = 30
     solve_params['measure_G2_blocks'] = set([("up", "up"), ("up", "dn")])
-    solve_params['measure_G2_block_order'] = "AABB"
+    solve_params['measure_G2_block_order'] = block_order.AABB
 
 start = time.time()
 S.solve(**solve_params)
