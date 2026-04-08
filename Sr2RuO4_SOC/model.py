@@ -2,7 +2,7 @@ import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *
 
-from triqs.gf import Gf, MeshImFreq, MeshDLRImFreq, MeshReFreq, MeshReFreqPts, MeshReFreqLog, Omega, iOmega_n, inverse, MeshBrZone, MeshProduct
+from triqs.gf import Gf, MeshImFreq, MeshReFreq, MeshReFreqPts, MeshReFreqLog, Omega, iOmega_n, inverse, MeshBrZone, MeshProduct
 from triqs.lattice import BravaisLattice, BrillouinZone
 from triqs.operators import c, c_dag, n
 from triqs.operators.util import h_int_kanamori, U_matrix_kanamori
@@ -56,10 +56,6 @@ mu_mat = mu * np.eye(n_idx)
 broadening = 1e-3
 
 # ==== Matsubara Green function and Hybridization ====
-dlr_wmax = 2*U
-dlr_eps = 1e-10
-dlr_iw_mesh = MeshDLRImFreq(beta, 'Fermion', dlr_wmax, dlr_eps, True)
-
 def make_g0_and_delta(mesh):
     real_freq = type(mesh) in [MeshReFreq, MeshReFreqPts, MeshReFreqLog]
     if real_freq:
@@ -76,7 +72,11 @@ def make_g0_and_delta(mesh):
     return G0, Delta
 
 G0_iw, Delta_iw = make_g0_and_delta(iw_mesh)
-G0_dlr_iw, Delta_dlr = make_g0_and_delta(dlr_iw_mesh)
+
+# ==== DLR Green functions (auto-determined wmax) ====
+dlr_eps = 1e-10
+G0_dlr_iw, Delta_dlr, dlr_wmax = make_gf_dlr_iw(G0_iw, Delta_iw, dlr_eps=dlr_eps)
+dlr_iw_mesh = G0_dlr_iw.mesh
 
 # ==== k-resolved Green function ====
 k_iw_mesh = MeshProduct(k_mesh, iw_mesh)

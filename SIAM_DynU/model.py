@@ -2,7 +2,7 @@ import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *
 
-from triqs.gf import Gf, MeshImFreq, MeshDLRImFreq, MeshReFreq, MeshReFreqPts, MeshReFreqLog, BlockGf, Omega, iOmega_n, inverse, SemiCircular
+from triqs.gf import Gf, MeshImFreq, MeshReFreq, MeshReFreqPts, MeshReFreqLog, BlockGf, Omega, iOmega_n, inverse, SemiCircular
 from triqs.gf.descriptors import Function
 from triqs.operators import c, c_dag, n
 from numpy import matrix
@@ -31,9 +31,6 @@ gf_struct = [(bl, n_orb) for bl in block_names]
 # ==== Frequency Meshes ====
 n_iw = int(10 * beta)
 iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
-dlr_wmax = 10.0
-dlr_eps = 1e-10
-dlr_iw_mesh = MeshDLRImFreq(beta, 'Fermion', dlr_wmax, dlr_eps, True)
 
 # ==== Non-Interacting Impurity Green function and Hybridization ====
 def make_g0_and_delta(mesh):
@@ -50,7 +47,11 @@ def make_g0_and_delta(mesh):
     return G0, Delta
 
 G0_iw, Delta_iw = make_g0_and_delta(iw_mesh)
-G0_dlr_iw, Delta_dlr = make_g0_and_delta(dlr_iw_mesh)
+
+# ==== DLR Green functions (auto-determined wmax) ====
+dlr_eps = 1e-10
+G0_dlr_iw, Delta_dlr, dlr_wmax = make_gf_dlr_iw(G0_iw, Delta_iw, dlr_eps=dlr_eps)
+dlr_iw_mesh = G0_dlr_iw.mesh
 
 # ==== Dynamic density-density interaction D0 ====
 # D0(iw) = D_coupling^2 * (1/(w-w0) - 1/(w+w0)) for ('up','dn') and ('dn','up') blocks
