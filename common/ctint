@@ -70,10 +70,10 @@ obs = {'G': S.G_iw}
 
 # Static observables
 density = {}
-for bl, bl_size in gf_struct:
+for bl_idx, (bl, bl_size) in enumerate(gf_struct):
     for i in range(bl_size):
         key = f"{bl}_{i}" if bl_size > 1 else bl
-        density[key] = S.densities[bl][i]
+        density[key] = S.densities[bl_idx][i]
 obs['static_obs'] = {'density': density}
 
 # chi2 measurement

@@ -43,6 +43,6 @@ obs = {'G': S.G_iw}
 
 # --------- Save ----------
 save_results("../results/w2dyn_cthyb.h5", "w2dyn_cthyb", version.version,
-             version.w2dyn_cthyb_hash,
+             version.w2dynamics_interface_hash,
              constr_params=constr_params, solve_params=solve_params,
              run_time=run_time, **obs)
