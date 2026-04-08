@@ -18,8 +18,6 @@ raise_if_mpi_imported()
 import triqs
 from h5 import HDFArchive
 
-raise_if_mpi_imported()
-
 # --------- Parse arguments ----------
 SUPPORTED = []
 args = parse_measure_args(SUPPORTED)

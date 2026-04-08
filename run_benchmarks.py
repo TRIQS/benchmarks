@@ -35,7 +35,7 @@ def parse_run_entry(entry):
         solver = entry['solver']
         measure = entry.get('measure', [])
         if isinstance(measure, str):
-            measure = [measure]
+            measure = measure.split()
         return solver, measure
     else:
         raise ValueError(f"Invalid run entry: {entry}")

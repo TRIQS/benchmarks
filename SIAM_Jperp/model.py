@@ -14,7 +14,7 @@ mu = U / 4.0
 w0 = 1.0
 J = 2.0
 
-block_names = ['dn', 'up']
+block_names = ['up', 'dn']
 n_orb = 1
 broadening = 1e-3
 

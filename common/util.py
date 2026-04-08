@@ -2,15 +2,15 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from triqs.gf import *
-from triqs.operators import c, c_dag, n, dagger
+from triqs.operators import c, c_dag
 
-# Get a list of all annihilation operators from a many-body operators
 def get_fundamental_operators(op):
+    """Extract unique annihilation operators from a many-body operator."""
     idx_lst = []
     for term, val in op:
         for has_dagger, (bl, orb) in term:
-            if not idx_lst.count([bl, orb]):
-                idx_lst.append([bl,orb])
+            if (bl, orb) not in idx_lst:
+                idx_lst.append((bl, orb))
     return [c(bl, orb) for bl, orb in idx_lst]
 
 

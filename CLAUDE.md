@@ -98,7 +98,20 @@ Models with dynamic interactions export descriptors in model.py:
 
 ### Run Automation
 - `benchmark_config.yaml` - Defines which solvers run on which models, with optional `--measure` args
-- `run_benchmarks.py` - Reads config and runs all benchmarks, captures logs, produces summary JSON
+- `run_benchmarks.py` - Reads config and runs all benchmarks, captures logs to `MODEL/results/SOLVER.log`, produces `benchmark_results.json`. Runs each solver from `MODEL/scripts/` with a 1-hour timeout.
+
+Config format:
+```yaml
+defaults:
+  n_mpi_ranks: 4
+models:
+  ModelName:
+    runs:
+      - solver_name                              # string form (no measure args)
+      - {solver: solver_name, measure: all}      # dict with measure (string or list)
+      - {solver: solver_name, measure: [chi2, chi3]}
+    n_mpi_ranks: 16  # optional per-model override
+```
 
 ## Adding a New Solver
 
@@ -116,14 +129,15 @@ Models with dynamic interactions export descriptors in model.py:
 4. Create `notebook.py` from template, convert with `jupytext --to ipynb notebook.py`
 5. Add to `benchmark_config.yaml`
 
-## Impurity Solvers Used
-- triqs_cthyb - CT-HYB Monte Carlo
-- triqs_ctseg - CT-HYB segment picture
-- triqs_ctint - CT-INT Monte Carlo
-- pyed - Exact diagonalization
-- pomerol - Full ED
-- edipack2triqs - EDIpack ED
-- nrgljubljana - NRG
-- w2dynamics - w2dyn CT-HYB
-- alps_cthyb - ALPS CT-HYB
-- forktps - Fork TPS
+## Conventions and Gotchas
+
+- **Symlinks only**: Always symlink common solvers into `MODEL/scripts/`; never hardcopy. Centralized bugfixes must propagate.
+- **Path setup in scripts**: All solver scripts do `sys.path.append(os.getcwd() + '/..')` to import `model.py` from the parent directory. Scripts must be run from `MODEL/scripts/`.
+- **save_results() is MPI-aware**: Only saves on master node. Non-master ranks silently return. It also captures the full script source via `inspect.getsource(__main__)`.
+- **DLR requirement for ctint**: ctint requires `G0_dlr_iw` (not `G0_iw`) for solver initialization.
+- **Eigenbasis rotation for ctseg**: Unlike cthyb, ctseg requires rotating G0 into the eigenbasis of h0 (extracted via hermitian tail fitting) before Fourier transform to tau.
+- **Static obs key naming**: Single-orbital models use short keys ("up", "dn"); multi-orbital use indexed keys ("up_0", "up_1"). Conditional: `key = f"{bl}_{i}" if bl_size > 1 else bl`.
+- **`--measure all`**: Expands to full SUPPORTED list within `parse_measure_args()`; solvers never see the literal "all" keyword.
+- **Chi3 DLR2D in ctint**: ctint stores chi3 in compressed DLR2D NFFT form; must convert via `make_gf_imfreq(make_gf_dlr2d(...))` for analysis.
+- **Real-frequency solvers**: atomdiag/edipack/nrg/forktps only compute G_w if `model.py` defines `w_mesh`, `broadening`, and `w_window`.
+- **Channel inter-translations**: `channels.py` pp/ph/xph translations raise `NotImplementedError`; only spin decomposition (d/m/s/t) is implemented.

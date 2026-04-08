@@ -28,10 +28,10 @@ def load_all_results(results_dir='results'):
     data = {}
     for fpath in sorted(glob(f'{results_dir}/*.h5')):
         solver = basename(fpath).replace('.h5', '')
-        ar = HDFArchive(fpath, 'r')
-        data[solver] = {}
-        for key in ar:
-            data[solver][key] = ar[key]
+        with HDFArchive(fpath, 'r') as ar:
+            data[solver] = {}
+            for key in ar:
+                data[solver][key] = ar[key]
     return data
 
 

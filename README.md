@@ -1,42 +1,83 @@
-TRIQS Solver benchmarks
+TRIQS Solver Benchmarks
 =======================
 
-This repository provides systematic tests and benchmarks of various impurity solvers
-for a set of reference impurity models. We use the Python interface of the
-[TRIQS library](https://triqs.github.io/triqs) as a framework.
+This repository provides systematic tests and benchmarks of various quantum impurity solvers
+using the Python interface of the [TRIQS library](https://triqs.github.io/triqs) as a framework.
 
-Each directory fully defines one specific impurity model and contains the following:
+Each directory defines one specific impurity model and contains:
 
-* **notebook.ipynb** - IPython Notebook with a description of the impurity model and analysis of results.
-* **model.py** - Defines the local Hamiltonian and the hybridization function of the impurity model.
-* **scripts** - Contains one script for each applicable impurity solver (e.g. cthyb, pyed, ...).
-* **results** - Contains one hdf5 archive for each impurity solver (e.g. cthyb.h5).
-		They consist of the results for the Green function and additional solver information.
+* **model.py** -- Hamiltonian, hybridization function, and Green function structure.
+* **scripts/** -- One script per applicable impurity solver (symlinks to `common/`).
+* **results/** -- HDF5 archives with solver output.
+* **notebook.ipynb** -- Jupyter notebook with model description and comparison of results.
+
+Running Benchmarks
+------------------
+
+Individual solver scripts:
+```bash
+cd Hubbard_Atom/scripts
+mpirun -np 4 python cthyb                 # G(iw) + static observables
+python atomdiag --measure G_w              # with real-frequency measurement
+python ctint --measure chi2 chi3           # with two-particle measurements
+```
+
+All benchmarks via the runner:
+```bash
+python run_benchmarks.py                          # all models
+python run_benchmarks.py Hubbard_Atom             # one model
+python run_benchmarks.py Hubbard_Atom ctint       # one model, one solver
+python run_benchmarks.py --solver ctint           # one solver across all models
+python run_benchmarks.py --dry-run                # print commands only
+python run_benchmarks.py --slurm                  # generate SLURM job scripts
+```
+
+The runner reads `benchmark_config.yaml` for the list of models, solvers, and measurement flags.
 
 Models
 ------
 
-* [**Hubbard_Atom**](https://github.com/TRIQS/benchmarks/blob/master/Hubbard_Atom/notebook.ipynb) A single atomic level with a Coulomb repulsion, a chemical potential and a Zeeman splitting term
-* [**SIAM_Discrete_Bath**](https://github.com/TRIQS/benchmarks/blob/master/SIAM_Discrete_Bath/notebook.ipynb) A dimer with spin-orbit coupling and density-density interaction coupled to two discrete bath states
-* [**SIAM_Wide_Band**](https://github.com/TRIQS/benchmarks/blob/master/SIAM_Wide_Band/notebook.ipynb) A dimer with spin-orbit coupling and density-density interaction coupled to two discrete bath states
-* [**Dimer**](https://github.com/TRIQS/benchmarks/blob/master/Dimer/notebook.ipynb) A dimer with Kanamori-Interaction coupled to two discrete bath states
-* [**Dimer_SOC**](https://github.com/TRIQS/benchmarks/blob/master/Dimer_SOC/notebook.ipynb) A dimer with spin-orbit coupling and density-density interaction coupled to two discrete bath states
-* [**Trimer**](https://github.com/TRIQS/benchmarks/blob/master/Trimer/notebook.ipynb) A trimer with Kanamori-Interaction coupled to three discrete bath states
-* [**Sr2RuO4**](https://github.com/TRIQS/benchmarks/blob/master/Sr2RuO4/notebook.ipynb) An effective 3-band impurity model for Sr2RuO4
-* [**Sr2RuO4_SOC**](https://github.com/TRIQS/benchmarks/blob/master/Sr2RuO4/notebook.ipynb) An effective 3-band impurity model for Sr2RuO4 including spin-orbit coupling
+| Model | Description |
+|---|---|
+| **Hubbard_Atom** | Single site with Coulomb repulsion, chemical potential, and Zeeman field |
+| **SIAM_Discrete_Bath** | Single impurity Anderson model coupled to discrete bath levels |
+| **SIAM_Wide_Band** | Single impurity Anderson model with semicircular (wide-band) hybridization |
+| **SIAM_DynU** | SIAM with dynamic density-density interaction $D_0(i\omega)$ |
+| **SIAM_Jperp** | SIAM with dynamic spin-spin interaction $J_\perp(i\omega)$ |
+| **Dimer** | Two-orbital Kanamori impurity coupled to discrete bath |
+| **Dimer_nn** | Two-orbital density-density impurity coupled to discrete bath |
+| **Dimer_SOC** | Two-orbital impurity with spin-orbit coupling (single spin-orbital block) |
+| **Trimer** | Three-orbital Kanamori impurity coupled to discrete bath |
+| **Plaquette** | Four-site cluster with Kanamori interaction and discrete bath |
+| **Plaquette_Wide_Band** | Four-site cluster with wide-band hybridization |
+| **Sr2RuO4** | Three-band model for Sr$_2$RuO$_4$ from Wannier90 |
+| **Sr2RuO4_SOC** | Three-band Sr$_2$RuO$_4$ with spin-orbit coupling |
+| **La2CuO4** | Single-band model for La$_2$CuO$_4$ from Wannier90 |
 
 Impurity Solvers
 ----------------
 
-* [**triqs_cthyb**](https://triqs.github.io/cthyb) - Continuous-time hybridization-expansion quantum Monte-Carlo code based on TRIQS.<br/>  Maintainer: [Nils Wentzell](mailto:nwentzell@flatironinstitute.com)
-* [**triqs_ctseg**](https://triqs.github.io/ctseg) (private) - Continuous-time hybridization-expansion quantum Monte-Carlo code in the segment picture.<br/>  Maintainer: [Thomas Ayral](mailto:th.ayral@gmail.com)
-* [**triqs_ctint**](https://triqs.github.io/ctint) (private) - Continuous-time interaction-expansion quantum Monte-Carlo code based on TRIQS.<br/>  Maintainer: [Nils Wentzell](mailto:nwentzell@flatironinstitute.com)
-* [**pyed**](https://github.com/hugostrand/pyed) - Exact diagonalization solver for finite quantum systems based on TRIQS. <br/>  Maintainer: [Hugo Strand](mailto:hstrand@flatironinstitute.org)
-* [**pomerol**](https://github.com/aeantipov/pomerol) - An exact diagonalization (full-ED) code written in C++ aimed at solving condensed matter second-quantized models of interacting fermions on finite size lattices at finite temperatures. It is designed to produce single and two-particle Greens functions. ([TRIQS Interface](https://github.com/krivenko/pomerol2triqs)).<br/>  Maintainer: [Andrey Antipov](mailto:andrey.e.antipov@gmail.com)
-* [**w2dynamics**](https://github.com/TRIQS/w2dynamics/w2dynamics) - A continuous-time hybridization expansion impurity solver contained in the w2dynamics software package ([TRIQS interface](https://triqs.github.io/w2dynamics_interface)).<br/>  Maintainer: [Andreas Hausoel](mailto:andreas.hausoel@physik.uni-wuerzburg.de)
+| Solver | Script | Type |
+|---|---|---|
+| [triqs_cthyb](https://triqs.github.io/cthyb) | `cthyb` | CT-HYB Monte Carlo |
+| [triqs_ctseg](https://triqs.github.io/ctseg) | `ctseg` | CT-HYB segment picture |
+| [triqs_ctint](https://triqs.github.io/ctint) | `ctint` | CT-INT Monte Carlo |
+| [pyed](https://github.com/hugostrand/pyed) | `pyed` | Exact diagonalization |
+| [pomerol](https://github.com/krivenko/pomerol2triqs) | `pomerol` | Full ED (two-particle) |
+| [edipack2triqs](https://github.com/EDIpack/edipack2triqs) | `edipack` | EDIpack ED |
+| [nrgljubljana_interface](https://github.com/TRIQS/nrgljubljana_interface) | `nrg` | NRG |
+| [w2dynamics](https://triqs.github.io/w2dynamics_interface) | `w2dyn_cthyb` | w2dyn CT-HYB |
+| [ALPS/CT-HYB](https://github.com/ALPSCore/CT-HYB) | `alps_cthyb` | ALPS CT-HYB (via DCore) |
+| [ForkTPS](https://github.com/TRIQS/forktps) | `forktps` | Fork TPS (real-frequency) |
+| triqs.atom_diag | `atomdiag` | Atomic ED |
 
-Adding your Solver
+Adding Your Solver
 ------------------
 
-If you would like to add your impurity solver to this benchmark project, please start from the instructions given in the [script_template](https://github.com/TRIQS/benchmarks/blob/master/common/script_template) file.
-For questions feel free to [contact me](mailto:nils.wentzell@gmail.com) or post an issue.
+1. Copy `common/script_template` to `common/your_solver`.
+2. Implement solver initialization, solve call, and observable collection.
+3. Use `save_results()` from `common/save_utils.py` for standardized HDF5 output.
+4. Symlink into applicable model directories: `ln -s ../../common/your_solver scripts/your_solver`
+5. Add entries to `benchmark_config.yaml`.
+
+For questions, [open an issue](https://github.com/TRIQS/benchmarks/issues) or contact [Nils Wentzell](mailto:nils.wentzell@gmail.com).
