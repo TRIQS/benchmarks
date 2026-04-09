@@ -1,65 +1,42 @@
 #!/usr/bin/env python
-from __future__ import print_function
+
+from dcore.tools import raise_if_mpi_imported
+raise_if_mpi_imported()
 
 from dcore.impurity_solvers.alps_cthyb import ALPSCTHYBSolver as Solver
-from dcore.tools import make_block_gf, raise_if_mpi_imported
 
 import sys, os, time
-import numpy
-from itertools import product
 sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
 from model import *
-from dcore_util import *
+from dcore_util import convert_to_dcore_format, convert_to_triqs_BlockGf
 from save_utils import save_results, parse_measure_args
-
-raise_if_mpi_imported()
-
-import triqs
-from h5 import HDFArchive
 
 # --------- Parse arguments ----------
 SUPPORTED = []
 args = parse_measure_args(SUPPORTED)
 
-norb, gf_struct_dcore, u_mat, G0_iw_dcore = convert_to_dcore_format(gf_struct, h_int, G0_iw, beta, n_iw)
+# --------- Convert model to DCore format ----------
+gf_struct_dcore, u_mat, G0_iw_dcore = convert_to_dcore_format(gf_struct, h_int, G0_iw, beta, n_iw)
 
-constr_params = {
-        'beta' : beta,
-        'gf_struct' : gf_struct_dcore,
-        'n_iw' : n_iw,
-        }
-
-
-# --------- Construct solver ----------
-S = Solver(constr_params["beta"], constr_params["gf_struct"], u_mat, constr_params["n_iw"])
-
-# --------- Initialize G0_iw ----------
-S.set_G0_iw(G0_iw_dcore)
-convert_to_triqs_bname(G0_iw_dcore, gf_struct, beta, n_iw)
-del G0_iw_dcore
-
-# --------- Get command to launch MPI program (i.e, "mpirun -np 8") ----------
-mpirun_command = os.environ["DCORE_MPIRUN_COMMAND"]
-
-# --------- Basis rotation ----------
-rot = None
-
-# --------- Solve! ----------
+constr_params = {'beta': beta, 'gf_struct': gf_struct_dcore, 'n_iw': n_iw}
 solve_params = {
-        "timelimit" : int(os.environ["DCORE_ALPSCTHYB_TIMELIMIT"]),
-        "exec_path" : "hybmat",
-        'random_seed_offset' : 0
-        }
+    'timelimit': int(os.environ.get("DCORE_ALPSCTHYB_TIMELIMIT", 3600)),
+    'exec_path': 'hybmat',
+    'random_seed_offset': 0,
+}
+
+# --------- Construct and run solver ----------
+S = Solver(beta, gf_struct_dcore, u_mat, n_iw)
+S.set_G0_iw(G0_iw_dcore)
+
+mpirun_command = os.environ.get("DCORE_MPIRUN_COMMAND", "mpirun -np 4")
 start = time.time()
-S.solve(rot, mpirun_command, solve_params)
+S.solve(None, mpirun_command, solve_params)
 run_time = time.time() - start
 
-# --------- Collect observables ----------
-G_result = convert_to_triqs_bname(S.get_Gimp_iw(), gf_struct, beta, n_iw)
-obs = {'G': G_result}
-
-# --------- Save ----------
+# --------- Collect and save ----------
+G = convert_to_triqs_BlockGf(S.get_Gimp_iw(), gf_struct, beta, n_iw)
 save_results("../results/alps_cthyb.h5", "alps_cthyb", "N/A", "N/A",
              constr_params=constr_params, solve_params=solve_params,
-             run_time=run_time, **obs)
+             run_time=run_time, G=G)

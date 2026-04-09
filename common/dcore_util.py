@@ -1,58 +1,59 @@
 #!/usr/bin/env python
+"""Conversion utilities between TRIQS and DCore formats."""
 
-
-from dcore.tools import make_block_gf, raise_if_mpi_imported
-
-import sys, os, time
 import numpy
-from itertools import product
-
-import triqs
-from triqs.gf import GfImFreq
+from dcore.tools import make_block_gf
+from dcore._dispatcher import GfImFreq
 from triqs.operators.util.extractors import extract_U_dict4
 
-raise_if_mpi_imported()
+# DCore block name mapping
+_bname_to_dcore = {'up': 'up', 'dn': 'down', 'bl': 'ud'}
+_bname_from_dcore = {v: k for k, v in _bname_to_dcore.items()}
+
+
+def _block_size(entry):
+    """Block size from gf_struct entry (name, int) or legacy (name, list)."""
+    return entry[1] if isinstance(entry[1], int) else len(entry[1])
+
 
 def convert_to_dcore_format(gf_struct, h_int, G0_iw, beta, n_iw):
-     """
-     Convert input data to DCore format:
-         * gf_struct is a dict.
-         * Allowed block names are "ud", "up", "down".
-     """
-     # --------- Convert gf_struct ----------
-     num_blocks = len(gf_struct)
-     for b in gf_struct:
-         assert b[0] in ['up', 'dn', 'bl']
-     bname_tr = {'up':'up', 'dn':'down', 'bl':'ud'}
-     gf_struct_dcore = {bname_tr[b[0]] : b[1] for b in gf_struct}
-     gf_struct_dcore_list = [(bname_tr[b[0]], b[1]) for b in gf_struct]
-     norb = len(gf_struct[0][1])//2 if num_blocks == 1 else len(gf_struct[0][1])
+    """Convert TRIQS model data to DCore format (dcorelib types, DCore block names)."""
+    use_soc = len(gf_struct) == 1
+    norb = _block_size(gf_struct[0]) // 2 if use_soc else _block_size(gf_struct[0])
 
-     if num_blocks == 1:
-         idx_tr = {('bl', i): i for i in range(2*norb)}
-         G0_iw_dcore = make_block_gf(GfImFreq, gf_struct_dcore, beta, n_iw)
-         G0_iw_dcore['ud'] = G0_iw['bl']
-     else:
-         idx_tr = {(b, i): i+ispin*norb for ispin, b in enumerate(['up', 'dn']) for i in range(norb)}
-         G0_iw_dcore = make_block_gf(GfImFreq, gf_struct_dcore, beta, n_iw)
-         G0_iw_dcore['up'] = G0_iw['up']
-         G0_iw_dcore['down'] = G0_iw['dn']
+    # Build DCore gf_struct with list indices
+    gf_struct_dcore = {_bname_to_dcore[bl]: list(range(_block_size((bl, n))))
+                       for bl, n in gf_struct}
 
-     # --------- Construct Coulomb tensor from h_int ----------
-     U_dict = extract_U_dict4(h_int)
-     u_mat = numpy.zeros((2*norb,)*4, dtype=complex)
-     for idx4, v in list(U_dict.items()):
-         print("U_dict: ", idx4, v)
-         idx4_ = [idx_tr[idx] for idx in idx4]
-         u_mat[idx4_[0], idx4_[1], idx4_[2], idx4_[3]] += v
-         print(idx4, idx4_, u_mat[idx4_[0], idx4_[1], idx4_[2], idx4_[3]])
+    # Copy G0_iw data into dcorelib Green function
+    G0_iw_dcore = make_block_gf(GfImFreq, gf_struct_dcore, beta, n_iw)
+    for bl in gf_struct:
+        G0_iw_dcore[_bname_to_dcore[bl[0]]].data[:] = G0_iw[bl[0]].data[:]
 
-     return norb, gf_struct_dcore, u_mat, G0_iw_dcore
+    # Build Coulomb tensor
+    if use_soc:
+        idx_tr = {('bl', i): i for i in range(2 * norb)}
+    else:
+        idx_tr = {(b, i): i + ispin * norb
+                  for ispin, b in enumerate(['up', 'dn']) for i in range(norb)}
+    U_dict = extract_U_dict4(h_int)
+    u_mat = numpy.zeros((2 * norb,) * 4, dtype=complex)
+    for idx4, v in U_dict.items():
+        idx4_ = [idx_tr[idx] for idx in idx4]
+        u_mat[idx4_[0], idx4_[1], idx4_[2], idx4_[3]] += v
 
-def convert_to_triqs_bname(G, gf_struct, beta, n_iw):
-    gf_struct_dict = {b[0] : b[1] for b in gf_struct}
-    G_copy = make_block_gf(GfImFreq, gf_struct_dict, beta, n_iw)
-    bname_trans = {'up':'up', 'down':'dn', 'ud':'bl'}
-    for bname, g in G:
-        G_copy[bname_trans[bname]] = g
-    return G_copy
+    return gf_struct_dcore, u_mat, G0_iw_dcore
+
+
+def convert_to_triqs_BlockGf(G_dcore, gf_struct, beta, n_iw):
+    """Convert dcorelib BlockGf (DCore block names) to TRIQS BlockGf."""
+    from triqs.gf import Gf, MeshImFreq, BlockGf
+    mesh = MeshImFreq(beta, 'Fermion', n_iw)
+    bl_list, g_list = [], []
+    for bname_dcore, g in G_dcore:
+        bl = _bname_from_dcore[bname_dcore]
+        g_triqs = Gf(mesh=mesh, target_shape=g.data.shape[1:])
+        g_triqs.data[:] = g.data[:]
+        bl_list.append(bl)
+        g_list.append(g_triqs)
+    return BlockGf(name_list=bl_list, block_list=g_list)
