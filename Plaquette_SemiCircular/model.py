@@ -56,7 +56,7 @@ def make_g0_and_delta(mesh):
     else:
         z = iOmega_n
     Delta = BlockGf(mesh=mesh, gf_struct=gf_struct)
-    Delta << SemiCircular(D)
+    Delta << 0.5 * SemiCircular(D)
     G0 = BlockGf(mesh=mesh, gf_struct=gf_struct)
     for bl in block_names:
         G0[bl] << inverse(z - h_0_mat - Delta[bl])
