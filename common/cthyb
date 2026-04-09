@@ -73,7 +73,7 @@ else:
 solve_params = {
         'h_int' : h_int,
         'n_warmup_cycles' : 10000,
-        'n_cycles' : 1000000,
+        'n_cycles' : args.n_cycles,
         'length_cycle' : 100,
         'measure_pert_order' : True,
         'measure_density_matrix' : True,

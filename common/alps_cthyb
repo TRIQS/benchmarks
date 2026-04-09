@@ -21,7 +21,7 @@ gf_struct_dcore, u_mat, G0_iw_dcore = convert_to_dcore_format(gf_struct, h_int, 
 
 constr_params = {'beta': beta, 'gf_struct': gf_struct_dcore, 'n_iw': n_iw}
 solve_params = {
-    'timelimit': int(os.environ.get("DCORE_ALPSCTHYB_TIMELIMIT", 3600)),
+    'timelimit': args.timelimit,
     'exec_path': 'hybmat',
     'random_seed_offset': 0,
 }
@@ -30,7 +30,7 @@ solve_params = {
 S = Solver(beta, gf_struct_dcore, u_mat, n_iw)
 S.set_G0_iw(G0_iw_dcore)
 
-mpirun_command = os.environ.get("DCORE_MPIRUN_COMMAND", "mpirun -np 4")
+mpirun_command = "mpirun -np 4"
 start = time.time()
 S.solve(None, mpirun_command, solve_params)
 run_time = time.time() - start

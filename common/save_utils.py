@@ -22,6 +22,10 @@ def parse_measure_args(supported):
     parser.add_argument('--measure', nargs='+', default=[],
                         help="Additional observables to measure: " +
                              ", ".join(supported) + ", or 'all'")
+    parser.add_argument('--n-cycles', type=int, default=1_000_000,
+                        help="Number of MC cycles (default: 1000000)")
+    parser.add_argument('--timelimit', type=int, default=60,
+                        help="MC time limit in seconds (default: 60)")
     args = parser.parse_args()
 
     # Expand 'all' to the full supported list

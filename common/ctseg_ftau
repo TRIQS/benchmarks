@@ -1,0 +1,91 @@
+#!/usr/bin/env python
+
+import sys, os, time
+sys.path.append(os.getcwd() + "/..")
+sys.path.append(os.getcwd() + "/../../common")
+from model import *
+import numpy as np
+from numpy import linalg
+
+from pytriqs.archive import HDFArchive
+from pytriqs.utility import mpi
+from triqs_ctseg import Solver, version
+
+
+# --------- Construct the CTSEG solver ----------
+constr_params = {
+        'beta' : beta,
+        'gf_struct' : gf_struct,
+        'n_iw' : n_iw,
+        'n_tau' : 100001
+        }
+S = Solver(**constr_params)
+
+# --- We need to rotate G0_iw into the local eigenbasis
+
+# Get the rotations to the eigenbasis for each block of G0_iw
+h0, Delta_iw = get_h0_Delta(G0_iw)
+rot_lst = [np.matrix(linalg.eig(h0_bl)[1]) for h0_bl in h0]
+
+# Rotate G0_iw
+for (bl, g0_bl), rot_bl in zip(G0_iw, rot_lst):
+    g0_bl << rot_bl.H * g0_bl * rot_bl
+
+# --------- Initialize G0_iw ----------
+S.G0_iw << G0_iw
+
+# --------- Solve! ----------
+solve_params = {
+        'h_int' : h_int,
+        'n_warmup_cycles' : 10000,
+        'n_cycles' : args.n_cycles,
+        'length_cycle' : 100,
+        'measure_Ftau' : True
+        }
+start = time.time()
+S.solve(**solve_params)
+end = time.time()
+
+print("Average sign: ", S.average_sign)
+G0_iw_rot = S.G0_iw.copy()
+
+# Rotate back G0_iw and G_tau
+for (bl, g0_bl), rot_bl in zip(S.G0_iw, rot_lst):
+    g0_bl << rot_bl * g0_bl * rot_bl.H
+for (bl, g_bl), rot_bl in zip(S.G_tau, rot_lst):
+    g_bl << rot_bl * g_bl * rot_bl.H
+for (bl, f_bl), rot_bl in zip(S.F_tau, rot_lst):
+    f_bl << rot_bl * f_bl * rot_bl.H
+
+
+# -------- Save in archive ---------
+if mpi.is_master_node():
+    with HDFArchive("../results/ctseg.h5",'w') as results:
+        G_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
+        F_iw = G_iw.copy()
+        for bl, idx_lst in gf_struct:
+            tail = make_zero_tail(G_iw[bl], 3)
+            tail[1] = np.eye(len(idx_lst))
+            G_iw[bl] << Fourier(S.G_tau[bl], tail)
+            F_iw[bl] << Fourier(S.F_tau[bl], tail)
+
+        #G_iw << Fourier(S.G_tau)
+        results["G"] = G_iw
+        results["F"] = F_iw
+        results["Sig"] = F_iw * inverse(G_iw)
+        results["G0_iw_rot"] = G0_iw_rot
+
+        import inspect
+        import __main__
+        results.create_group("Solver_Info")
+        info_grp = results["Solver_Info"]
+        info_grp["solver_name"] = "triqs_ctseg"
+        info_grp["constr_params"] = constr_params
+        info_grp["solve_params"] = solve_params
+        # info_grp["solver"] = S
+        info_grp["solver_version"] = version.version
+        info_grp["solver_git_hash"] = version.ctseg_hash
+        info_grp["triqs_git_hash"] = version.triqs_hash
+        info_grp["script"] = inspect.getsource(__main__)
+        info_grp["num_threads"] = mpi.size
+        info_grp["run_time"] = end - start

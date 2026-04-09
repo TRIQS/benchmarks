@@ -7,3 +7,4 @@ slurm_*.sh
 edipack-*.tmp/
 *.dat
 jupytext.toml
+nrg_tempdir_*

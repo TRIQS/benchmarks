@@ -43,20 +43,26 @@ def load_config(config_path='benchmark_config.yaml'):
 
 
 def parse_run_entry(entry):
-    """Parse a run entry from the config into (solver_name, measure_list)."""
+    """Parse a run entry from the config into (solver_name, measure_list, no_mpi, mc_args)."""
     if isinstance(entry, str):
-        return entry, []
+        return entry, [], False, {}
     elif isinstance(entry, dict):
         solver = entry['solver']
         measure = entry.get('measure', [])
         if isinstance(measure, str):
             measure = measure.split()
-        return solver, measure
+        no_mpi = entry.get('no_mpi', False)
+        mc_args = {}
+        if 'n_cycles' in entry:
+            mc_args['n-cycles'] = entry['n_cycles']
+        if 'timelimit' in entry:
+            mc_args['timelimit'] = entry['timelimit']
+        return solver, measure, no_mpi, mc_args
     else:
         raise ValueError(f"Invalid run entry: {entry}")
 
 
-def build_command(model, solver, measure, n_mpi_ranks):
+def build_command(model, solver, measure, n_mpi_ranks, no_mpi=False, mc_args=None):
     """Build the shell command for a single solver run."""
     script_dir = os.path.join(model, 'scripts')
     script_path = os.path.join(script_dir, solver)
@@ -65,20 +71,22 @@ def build_command(model, solver, measure, n_mpi_ranks):
         return None, f"Script not found: {script_path}"
 
     cmd_parts = []
-    if n_mpi_ranks > 1:
+    if not no_mpi and n_mpi_ranks > 1:
         cmd_parts.extend(['mpirun', '-np', str(n_mpi_ranks)])
     cmd_parts.extend(['python', solver])
 
     if measure:
         cmd_parts.extend(['--measure'] + measure)
+    for key, val in (mc_args or {}).items():
+        cmd_parts.extend([f'--{key}', str(val)])
 
     cmd = ' '.join(cmd_parts)
     return cmd, None
 
 
-def run_single(model, solver, measure, n_mpi_ranks, dry_run=False):
+def run_single(model, solver, measure, n_mpi_ranks, no_mpi=False, mc_args=None, dry_run=False):
     """Run a single benchmark. Returns dict with status info."""
-    cmd, err = build_command(model, solver, measure, n_mpi_ranks)
+    cmd, err = build_command(model, solver, measure, n_mpi_ranks, no_mpi=no_mpi, mc_args=mc_args)
     result = {
         'model': model,
         'solver': solver,
@@ -131,9 +139,9 @@ def run_single(model, solver, measure, n_mpi_ranks, dry_run=False):
     return result
 
 
-def generate_slurm_script(model, solver, measure, n_mpi_ranks):
+def generate_slurm_script(model, solver, measure, n_mpi_ranks, no_mpi=False, mc_args=None):
     """Generate a SLURM job script for a single run."""
-    cmd, err = build_command(model, solver, measure, n_mpi_ranks)
+    cmd, err = build_command(model, solver, measure, n_mpi_ranks, no_mpi=no_mpi, mc_args=mc_args)
     if err:
         return None
 
@@ -189,7 +197,7 @@ def main():
         print(f"\n=== {model} ===")
 
         for entry in runs:
-            solver, measure = parse_run_entry(entry)
+            solver, measure, no_mpi, mc_args = parse_run_entry(entry)
 
             # Filter by solver if specified
             if args.solver and solver != args.solver:
@@ -198,7 +206,7 @@ def main():
                 continue
 
             if args.slurm:
-                script = generate_slurm_script(model, solver, measure, n_mpi_ranks)
+                script = generate_slurm_script(model, solver, measure, n_mpi_ranks, no_mpi=no_mpi, mc_args=mc_args)
                 if script:
                     slurm_path = f"slurm_{model}_{solver}.sh"
                     with open(slurm_path, 'w') as f:
@@ -206,7 +214,7 @@ def main():
                     print(f"  Generated {slurm_path}")
             else:
                 result = run_single(model, solver, measure, n_mpi_ranks,
-                                    dry_run=args.dry_run)
+                                    no_mpi=no_mpi, mc_args=mc_args, dry_run=args.dry_run)
                 all_results.append(result)
 
     # Summary
