@@ -47,9 +47,7 @@ if has_Jperp:
 # --------- Solve! ----------
 solve_params = {
         'h_int' : h_int,
-        'n_warmup_cycles' : 10000,
         'n_cycles' : 1000000,
-        'length_cycle' : 100,
         'measure_densities' : True,
         }
 

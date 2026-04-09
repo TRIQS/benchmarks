@@ -15,7 +15,18 @@ args = parse_measure_args(SUPPORTED)
 
 # --------- Construct the ED solver ----------
 fundamental_operators = util.get_fundamental_operators(h_tot)
+hilbert_dim = 2**len(fundamental_operators)
+
+# chi3 via set_g3_tau scales as hilbert_dim^3 * n_tau^2 and becomes
+# infeasible beyond ~16 states (dim=16 ≈ 40 min, dim=64 ≈ 45 h).
+# For larger systems, use pomerol which implements chi3 more efficiently.
+MAX_CHI3_DIM = 16
+if 'chi3' in args.measure and hilbert_dim > MAX_CHI3_DIM:
+    sys.exit(f"pyed: chi3 infeasible for Hilbert space dim {hilbert_dim} "
+             f"(limit {MAX_CHI3_DIM}). Use pomerol instead.")
+
 ed = TriqsExactDiagonalization(h_tot, fundamental_operators, beta)
+print(f"Hilbert space dimension: {hilbert_dim}")
 print("Free energy ", ed.get_free_energy())
 
 # --------- Calculate the single-particle Green function ----------

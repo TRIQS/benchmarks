@@ -7,6 +7,7 @@ from model import *
 from save_utils import save_results, parse_measure_args
 
 from triqs.utility import mpi
+from triqs.operators import n
 from triqs_cthyb import Solver, version
 import numpy as np
 

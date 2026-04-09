@@ -17,6 +17,11 @@ except ImportError:
 SUPPORTED = ['G_w', 'chi2']
 args = parse_measure_args(SUPPORTED)
 
+# --------- Check gf_struct compatibility ----------
+if len(gf_struct) < 2:
+    sys.exit("edipack: edipack2triqs does not yet support single-block gf_struct. "
+             "This requires a generalization of the interface.")
+
 # --------- Build fundamental operator lists ----------
 fops_imp_up  = [('up', o) for o in range(n_orb)]
 fops_imp_dn  = [('dn', o) for o in range(n_orb)]
