@@ -62,9 +62,10 @@ if 'chi3' in args.measure:
     from channels import to_physical_channels_ph, to_physical_channels_pp
 
     n_tau_chi3 = 10 * (2 * n_iw + 1)
-    tau_mesh = MeshImTime(beta, 'Fermion', n_tau_chi3)
+    tau_mesh_b = MeshImTime(beta, 'Boson', n_tau_chi3)
+    tau_mesh_f = MeshImTime(beta, 'Fermion', n_tau_chi3)
 
-    chi3pp_tau = util.Block2Gf_from_struct(mesh=MeshProduct(tau_mesh, tau_mesh), struct=gf_struct)
+    chi3pp_tau = util.Block2Gf_from_struct(mesh=MeshProduct(tau_mesh_b, tau_mesh_f), struct=gf_struct)
     chi3ph_tau = chi3pp_tau.copy()
 
     for (bl1, bl1_size), (bl2, bl2_size) in product(gf_struct, gf_struct):
@@ -77,9 +78,13 @@ if 'chi3' in args.measure:
     chi3pp_iw = util.Block2Gf_from_fourier2D(chi3pp_tau, n_iw, gf_struct)
     chi3ph_iw = util.Block2Gf_from_fourier2D(chi3ph_tau, n_iw, gf_struct)
 
+    # Contract 4-index to 3-index (density vertex diagonal) and apply spin decomposition
     chi3_d, chi3_m = to_physical_channels_ph(chi3ph_iw[('up', 'up')], chi3ph_iw[('up', 'dn')])
     chi3_s, chi3_t = to_physical_channels_pp(chi3pp_iw[('up', 'dn')], chi3pp_iw[('dn', 'up')])
-    obs.update(chi3_d=chi3_d, chi3_m=chi3_m, chi3_s=chi3_s, chi3_t=chi3_t)
+    obs.update(chi3_d=util.contract_chi3_density(chi3_d),
+               chi3_m=util.contract_chi3_density(chi3_m),
+               chi3_s=util.contract_chi3_density(chi3_s),
+               chi3_t=util.contract_chi3_density(chi3_t))
 
 # --------- Save ----------
 save_results("../results/pyed.h5", "pyed", "N/A", "N/A", **obs)

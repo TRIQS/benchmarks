@@ -41,6 +41,49 @@ def to_physical_channels_pp(chi_ud, chi_udc):
 
 
 # =====================================================================
+# Frequency parameterization translations for chi3
+# =====================================================================
+#
+# Fermionic convention: chi3(nu1, nu2) with both fermionic
+#
+# Channel parameterizations (nu1, nu2) <-> (Omega, nu):
+#   ph:  nu1=nu, nu2=Omega+nu    =>  Omega=nu2-nu1 (bosonic), nu=nu1
+#   pp:  nu1=nu, nu2=Omega-nu    =>  Omega=nu1+nu2 (bosonic), nu=nu1
+
+
+def chi3_ph_to_ferm(Omega, nu):
+    """(Omega, nu) in ph channel -> fermionic (nu1, nu2).
+
+    nu1 = nu,  nu2 = Omega + nu
+    """
+    return nu, Omega + nu
+
+
+def chi3_ferm_to_ph(nu1, nu2):
+    """Fermionic (nu1, nu2) -> (Omega, nu) in ph channel.
+
+    Omega = nu2 - nu1 (bosonic),  nu = nu1
+    """
+    return nu2 - nu1, nu1
+
+
+def chi3_pp_to_ferm(Omega, nu):
+    """(Omega, nu) in pp channel -> fermionic (nu1, nu2).
+
+    nu1 = nu,  nu2 = Omega - nu
+    """
+    return nu, Omega - nu
+
+
+def chi3_ferm_to_pp(nu1, nu2):
+    """Fermionic (nu1, nu2) -> (Omega, nu) in pp channel.
+
+    Omega = nu1 + nu2 (bosonic),  nu = nu1
+    """
+    return nu1 + nu2, nu1
+
+
+# =====================================================================
 # Frequency parameterization translations for chi4
 # =====================================================================
 #

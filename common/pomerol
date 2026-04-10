@@ -66,23 +66,32 @@ if 'G_w' in args.measure:
 
 # chi2 measurement (--measure chi2)
 if 'chi2' in args.measure:
+    from itertools import product as iprod
+    from triqs.gf import Gf, MeshImFreq
     from channels import to_physical_channels_ph, to_physical_channels_pp
+    import util
 
-    # Build chi2_ph from pomerol scalar chi_iw calls
-    chi2_uu = ed.chi_iw(('up', 0), ('up', 0), ('up', 0), ('up', 0), beta, n_iw, True)
-    chi2_ud = ed.chi_iw(('up', 0), ('up', 0), ('dn', 0), ('dn', 0), beta, n_iw, True)
-    chi2_d, chi2_m = to_physical_channels_ph(chi2_uu, chi2_ud)
-    obs['chi2_d'] = chi2_d
-    obs['chi2_m'] = chi2_m
+    iW_mesh = MeshImFreq(beta, 'Boson', n_iw)
 
-    # Build chi2_pp: chi2_pp_ud and chi2_pp_udc (crossed)
-    chi2_pp_ud = ed.chi_iw(('up', 0), ('dn', 0), ('up', 0), ('dn', 0), beta, n_iw, True)
-    chi2_pp_udc = ed.chi_iw(('dn', 0), ('up', 0), ('up', 0), ('dn', 0), beta, n_iw, True)
-    chi2_s, chi2_t = to_physical_channels_pp(chi2_pp_ud, chi2_pp_udc)
-    obs['chi2_s'] = chi2_s
-    obs['chi2_t'] = chi2_t
+    # Build chi2 Block2Gf containers with target_shape=(bl1_size, bl2_size)
+    # chi2_ph[(s1,s2)][a,b] = <n_{s1,a}(Omega) n_{s2,b}(-Omega)>
+    chi2ph_iw = util.Block2Gf_from_struct(mesh=iW_mesh, struct=gf_struct, n_legs=2)
+    chi2pp_iw = util.Block2Gf_from_struct(mesh=iW_mesh, struct=gf_struct, n_legs=2)
 
-n_iw_2p = min(n_iw, 30)  # Frequency box for two-particle quantities
+    for (bl1, bl1_size), (bl2, bl2_size) in iprod(gf_struct, gf_struct):
+        for a, b in iprod(range(bl1_size), range(bl2_size)):
+            # ph: <c†_{bl1,a} c_{bl1,a} c†_{bl2,b} c_{bl2,b}> (density-density)
+            g = ed.chi_iw((bl1, a), (bl1, a), (bl2, b), (bl2, b), beta, n_iw, False)
+            chi2ph_iw[(bl1, bl2)].data[:, a, b] = g.data[:]
+            # pp: <c†_{bl1,a} c_{bl2,b} c†_{bl1,a} c_{bl2,b}> (pair correlator)
+            g = ed.chi_iw((bl1, a), (bl2, b), (bl1, a), (bl2, b), beta, n_iw, False)
+            chi2pp_iw[(bl1, bl2)].data[:, a, b] = g.data[:]
+
+    chi2_d, chi2_m = to_physical_channels_ph(chi2ph_iw[('up', 'up')], chi2ph_iw[('up', 'dn')])
+    chi2_s, chi2_t = to_physical_channels_pp(chi2pp_iw[('up', 'dn')], chi2pp_iw[('dn', 'up')])
+    obs.update(chi2_d=chi2_d, chi2_m=chi2_m, chi2_s=chi2_s, chi2_t=chi2_t)
+
+n_iw_2p = n_iw
 
 # chi3 measurement (--measure chi3)
 if 'chi3' in args.measure:
@@ -96,7 +105,10 @@ if 'chi3' in args.measure:
 
     chi3_d, chi3_m = to_physical_channels_ph(chi3_ph[('up', 'up')], chi3_ph[('up', 'dn')])
     chi3_s, chi3_t = to_physical_channels_pp(chi3_pp[('up', 'dn')], chi3_pp[('dn', 'up')])
-    obs.update(chi3_d=chi3_d, chi3_m=chi3_m, chi3_s=chi3_s, chi3_t=chi3_t)
+    obs.update(chi3_d=util.contract_chi3_density(chi3_d),
+               chi3_m=util.contract_chi3_density(chi3_m),
+               chi3_s=util.contract_chi3_density(chi3_s),
+               chi3_t=util.contract_chi3_density(chi3_t))
 
 # chi4/G2 measurement (--measure chi4)
 if 'chi4' in args.measure:

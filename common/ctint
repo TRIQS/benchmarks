@@ -8,6 +8,7 @@ sys.path.append(os.getcwd() + "/../../common")
 from model import beta, gf_struct, n_iw, dlr_wmax, G0_dlr_iw, h_int
 from save_utils import save_results, parse_measure_args
 
+from triqs.gf import make_gf_dlr, make_gf_imfreq
 from triqs_ctint import Solver, version
 
 # --------- Parse arguments ----------
@@ -74,7 +75,7 @@ S.solve(**solve_params)
 run_time = time.time() - start
 
 # --------- Collect observables ----------
-obs = {'G': S.G_iw}
+obs = {'G': make_gf_imfreq(make_gf_dlr(S.G_iw), n_iw)}
 
 # Static observables
 density = {}
@@ -84,24 +85,53 @@ for bl_idx, (bl, bl_size) in enumerate(gf_struct):
         density[key] = S.densities[bl_idx][i]
 obs['static_obs'] = {'density': density}
 
-# chi2 measurement
+# chi2 measurement (DLR -> ImFreq conversion)
 if 'chi2' in args.measure:
     from channels import to_physical_channels_ph, to_physical_channels_pp
     chi2_d, chi2_m = to_physical_channels_ph(S.chi2ph_iw[('up', 'up')], S.chi2ph_iw[('up', 'dn')])
     chi2_s, chi2_t = to_physical_channels_pp(S.chi2pp_iw[('up', 'dn')], S.chi2pp_iw[('dn', 'up')])
+    import util
+    chi2_d = util.contract_chi2_density(make_gf_imfreq(make_gf_dlr(chi2_d), n_iw))
+    chi2_m = util.contract_chi2_density(make_gf_imfreq(make_gf_dlr(chi2_m), n_iw))
+    chi2_s = util.contract_chi2_density(make_gf_imfreq(make_gf_dlr(chi2_s), n_iw))
+    chi2_t = util.contract_chi2_density(make_gf_imfreq(make_gf_dlr(chi2_t), n_iw))
     obs.update(chi2_d=chi2_d, chi2_m=chi2_m, chi2_s=chi2_s, chi2_t=chi2_t)
 
-# chi3 measurement (DLR2D NFFT approach)
+# chi3 measurement — evaluate DLR2D on (Boson, Fermion) channel mesh
 if 'chi3' in args.measure:
-    from triqs.gf import make_gf_imfreq, make_gf_dlr2d
+    from triqs.gf import make_gf_dlr2d, MeshImFreq, MeshProduct
     from channels import to_physical_channels_ph, to_physical_channels_pp
+    import util
 
-    chi3pp = make_gf_imfreq(make_gf_dlr2d(S.chi3pp_iw_nfft), n_iw)
-    chi3ph = make_gf_imfreq(make_gf_dlr2d(S.chi3ph_iw_nfft), n_iw)
+    iW_mesh = MeshImFreq(beta, 'Boson', n_iw)
+    iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
+    chi3_mesh = MeshProduct(iW_mesh, iw_mesh)
+
+    # Convert NFFT data to DLR2D coefficient representation (evaluable at arbitrary frequencies)
+    chi3pp_dlr2d = {bl: make_gf_dlr2d(S.chi3pp_iw_nfft[bl]) for bl in S.chi3pp_iw_nfft.indices}
+    chi3ph_dlr2d = {bl: make_gf_dlr2d(S.chi3ph_iw_nfft[bl]) for bl in S.chi3ph_iw_nfft.indices}
+
+    # Create target containers on (Boson, Fermion) mesh
+    chi3pp = util.Block2Gf_from_struct(mesh=chi3_mesh, struct=gf_struct)
+    chi3ph = util.Block2Gf_from_struct(mesh=chi3_mesh, struct=gf_struct)
+
+    # Evaluate DLR2D at fermionic pairs using channel translations:
+    #   PP: chi3(Omega, nu) at (nu1, nu2) = (nu, Omega - nu)
+    #   PH: chi3(Omega, nu) at (nu1, nu2) = (nu, Omega + nu)
+    for iW, iw in chi3_mesh:
+        Omega, nu = iW.value, iw.value
+        ferm_pp = (nu, Omega - nu)
+        ferm_ph = (nu, Omega + nu)
+        for bl in chi3pp.indices:
+            chi3pp[bl][iW, iw] = chi3pp_dlr2d[bl](ferm_pp)
+            chi3ph[bl][iW, iw] = chi3ph_dlr2d[bl](ferm_ph)
 
     chi3_d, chi3_m = to_physical_channels_ph(chi3ph[('up', 'up')], chi3ph[('up', 'dn')])
     chi3_s, chi3_t = to_physical_channels_pp(chi3pp[('up', 'dn')], chi3pp[('dn', 'up')])
-    obs.update(chi3_d=chi3_d, chi3_m=chi3_m, chi3_s=chi3_s, chi3_t=chi3_t)
+    obs.update(chi3_d=util.contract_chi3_density(chi3_d),
+               chi3_m=util.contract_chi3_density(chi3_m),
+               chi3_s=util.contract_chi3_density(chi3_s),
+               chi3_t=util.contract_chi3_density(chi3_t))
 
     # Also store DLR2D compressed representations
     obs['chi3pp_iw_nfft'] = S.chi3pp_iw_nfft

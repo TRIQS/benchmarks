@@ -8,3 +8,13 @@ edipack-*.tmp/
 *.dat
 jupytext.toml
 nrg_tempdir_*
+
+# edipack solver temporary files (written to scripts/ during runs)
+*/scripts/Uijkl.txt
+*/scripts/basis.txt
+*/scripts/delta.txt
+*/scripts/hopping.txt
+*/scripts/input.ini
+
+# solver runtime output files
+*/scripts/output

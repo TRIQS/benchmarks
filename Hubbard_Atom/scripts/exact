@@ -106,8 +106,8 @@ if 'chi3' in args.measure or 'chi2' in args.measure:
 
     # Fill chi3 containers
     iW_mesh = MeshImFreq(beta, 'Boson', n_iw)
-    chi3pp_iw = Block2Gf_from_struct(mesh=MeshProduct(iW_mesh, iw_mesh), struct=gf_struct)
-    chi3ph_iw = Block2Gf_from_struct(mesh=MeshProduct(iW_mesh, iw_mesh), struct=gf_struct)
+    chi3pp_iw = Block2Gf_from_struct(mesh=MeshProduct(iW_mesh, iw_mesh), struct=gf_struct, n_legs=3)
+    chi3ph_iw = Block2Gf_from_struct(mesh=MeshProduct(iW_mesh, iw_mesh), struct=gf_struct, n_legs=3)
 
     all_blocks = [('up', 'up'), ('up', 'dn'), ('dn', 'dn'), ('dn', 'up')]
     for iW, iw in chi3pp_iw[('up', 'dn')].mesh:
@@ -156,8 +156,8 @@ if 'chi2' in args.measure:
     # Fill chi2 containers
     if 'iW_mesh' not in dir():
         iW_mesh = MeshImFreq(beta, 'Boson', n_iw)
-    chi2pp_iw = Block2Gf_from_struct(mesh=iW_mesh, struct=gf_struct)
-    chi2ph_iw = Block2Gf_from_struct(mesh=iW_mesh, struct=gf_struct)
+    chi2pp_iw = Block2Gf_from_struct(mesh=iW_mesh, struct=gf_struct, n_legs=2)
+    chi2ph_iw = Block2Gf_from_struct(mesh=iW_mesh, struct=gf_struct, n_legs=2)
 
     for iW in chi2pp_iw[('up', 'dn')].mesh:
         for block in all_blocks:
