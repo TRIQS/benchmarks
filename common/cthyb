@@ -1,9 +1,11 @@
 #!/usr/bin/env python
+# Solver: CT-HYB (triqs_cthyb) -- hybridization expansion
+# Requires: non-zero Delta(iw); supports Jperp via delta_interface
 
 import sys, os, time
 sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
-from model import *
+from model import beta, gf_struct, n_iw, G0_iw, h_int
 from save_utils import save_results, parse_measure_args
 
 from triqs.utility import mpi
@@ -16,7 +18,11 @@ SUPPORTED = ['chi4']
 args = parse_measure_args(SUPPORTED)
 
 # --------- Auto-detect dynamic interactions from model.py ----------
-has_Jperp = 'Jperp_func' in dir()
+try:
+    from model import Jperp_func
+    has_Jperp = True
+except ImportError:
+    has_Jperp = False
 
 n_tau_bosonic = 2001
 

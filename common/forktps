@@ -1,11 +1,13 @@
 #!/usr/bin/env python
+# Solver: Fork TPS -- real-frequency tensor product solver
+# Requires: continuous bath with Delta(w), w_mesh, gf_struct
 
 import sys, os, time
 from itertools import product
 
 sys.path.append(os.getcwd() + '/..')
 sys.path.append(os.getcwd() + '/../../common')
-from model import *
+from model import gf_struct, w_mesh, Delta_w, U, h_0_mat, mu_mat, dc_mat
 from save_utils import save_results, parse_measure_args
 
 import numpy as np

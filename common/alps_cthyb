@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+# Solver: ALPS CT-HYB (via DCore) -- hybridization expansion
+# Requires: non-zero Delta(iw); no dynamic interactions
+# Note: runs without MPI wrapper (DCore manages its own MPI subprocesses)
 
 from dcore.tools import raise_if_mpi_imported
 raise_if_mpi_imported()
@@ -8,7 +11,7 @@ from dcore.impurity_solvers.alps_cthyb import ALPSCTHYBSolver as Solver
 import sys, os, time
 sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
-from model import *
+from model import beta, gf_struct, n_iw, G0_iw, h_int
 from dcore_util import convert_to_dcore_format, convert_to_triqs_BlockGf
 from save_utils import save_results, parse_measure_args
 

@@ -22,7 +22,6 @@ models:
       - {solver: ctseg, measure: chi2}
       - {solver: alps_cthyb, no_mpi: true}
       - w2dyn_cthyb
-      - nrg
 
   # SIAM_Discrete_Bath_3Level: model.py not yet created, skipped for now
 
@@ -63,6 +62,7 @@ models:
       - pyed
       - pomerol
       - {solver: atomdiag, measure: G_w}
+      - cthyb
       - ctint
       - {solver: alps_cthyb, no_mpi: true}
 

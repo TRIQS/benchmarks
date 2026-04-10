@@ -1,9 +1,16 @@
 #!/usr/bin/env python
+# Solver: NRG (nrgljubljana_interface) -- numerical renormalization group
+# Requires: continuous bath (semicircular/DMFT), block_names, U, mu, beta
+# Optional: h (magnetic field)
 
 import sys, os, time
 sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
-from model import *
+from model import block_names, U, mu, beta
+try:
+    from model import h
+except ImportError:
+    h = 0.0
 from save_utils import save_results, parse_measure_args
 
 try:
@@ -18,7 +25,7 @@ SUPPORTED = ['chi2']
 args = parse_measure_args(SUPPORTED)
 
 # --------- Determine symmetry type from model parameters ----------
-use_qsz = abs(h) > 1e-10 if 'h' in dir() else False
+use_qsz = abs(h) > 1e-10
 symtype = 'QSZ' if use_qsz else 'QS'
 
 # --------- Construct the NRG solver ----------

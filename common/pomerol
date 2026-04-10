@@ -1,9 +1,15 @@
 #!/usr/bin/env python
+# Solver: pomerol (pomerol2triqs) -- exact diagonalization
+# Requires: h_tot; optional w_mesh/broadening for G(w)
 
 import sys, os
 sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
-from model import *
+from model import h_tot, gf_struct, beta, n_iw
+try:
+    from model import w_mesh, w_window, n_w, broadening
+except ImportError:
+    w_mesh = None
 import util
 from save_utils import save_results, parse_measure_args
 
@@ -52,7 +58,7 @@ obs['static_obs'] = {'density': density, 'nn_ab': nn_ab}
 
 # Real-frequency Green function (--measure G_w)
 if 'G_w' in args.measure:
-    if 'w_mesh' not in dir():
+    if w_mesh is None:
         print("ERROR: model.py does not define w_mesh. Cannot compute G_w.")
         sys.exit(1)
     obs['G_w'] = ed.G_w([(bl, idx_lst) for bl, idx_lst in gf_struct],

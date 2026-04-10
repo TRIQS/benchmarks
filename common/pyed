@@ -1,9 +1,11 @@
 #!/usr/bin/env python
+# Solver: pyed -- exact diagonalization
+# Requires: h_tot (full Hamiltonian including bath)
 
 import sys, os
 sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
-from model import *
+from model import h_tot, gf_struct, G0_iw, n_iw, beta
 import util
 from save_utils import save_results, parse_measure_args
 
