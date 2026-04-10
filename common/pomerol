@@ -53,7 +53,8 @@ for bl, bl_size in gf_struct:
             for j in range(bl2_size):
                 key2 = f"{bl2}_{j}" if bl2_size > 1 else bl2
                 nn_ab[f"{key},{key2}"] = ed.ensemble_average(
-                    (bl, i), (bl2, j), (bl2, j), (bl, i), beta)
+                    (bl, i), (bl, i), (bl2, j), (bl2, j), beta,
+                    dagger=(True, False, True, False))
 obs['static_obs'] = {'density': density, 'nn_ab': nn_ab}
 
 # Real-frequency Green function (--measure G_w)
