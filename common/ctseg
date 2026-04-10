@@ -12,7 +12,7 @@ from save_utils import save_results, parse_measure_args
 import numpy as np
 from numpy import linalg
 
-from triqs.gf import fit_hermitian_tail, Fourier, make_zero_tail, GfImFreq, GfImTime
+from triqs.gf import BlockGf, Gf, GfImFreq, GfImTime, MeshImFreq, fit_hermitian_tail, Fourier, iOmega_n, inverse, make_zero_tail
 from triqs.utility import mpi
 from triqs_ctseg import Solver, version
 
@@ -119,7 +119,7 @@ for (bl, g_bl), rot_bl in zip(S.results.G_tau, rot_lst):
     g_bl << rot_bl * g_bl * rot_bl.H
 
 # --------- Collect observables ----------
-G_iw = BlockGf(mesh=iw_mesh, gf_struct=gf_struct)
+G_iw = BlockGf(mesh=MeshImFreq(beta, 'Fermion', n_iw), gf_struct=gf_struct)
 for bl, l in gf_struct:
     tail = make_zero_tail(G_iw[bl], 2)
     tail[1] = np.eye(l)

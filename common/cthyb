@@ -9,7 +9,8 @@ from model import beta, gf_struct, n_iw, G0_iw, h_int
 from save_utils import save_results, parse_measure_args
 
 from triqs.utility import mpi
-from triqs.operators import n
+from triqs.gf import iOmega_n, inverse
+from triqs.operators import c, c_dag, n
 from triqs_cthyb import Solver, version
 import numpy as np
 
@@ -42,7 +43,7 @@ S = Solver(**constr_params)
 # --------- Initialize G0_iw / Delta_tau ----------
 if has_Jperp:
     from triqs.gf import fit_hermitian_tail, Fourier, GfImFreq, GfImTime
-    from triqs.operators import c_dag as c_dag_op
+    from triqs.operators import Operator
 
     # Decompose G0_iw into Delta_iw + h_loc0
     Delta_iw = G0_iw.copy()
@@ -56,7 +57,6 @@ if has_Jperp:
     S.Delta_tau << Fourier(Delta_iw)
 
     # Build h_loc0 operator from h_0 matrices
-    from triqs.operators import Operator
     h_loc0 = Operator()
     for bl, bl_size in gf_struct:
         h0 = h0_matrices[bl]
@@ -64,7 +64,7 @@ if has_Jperp:
             for j in range(bl_size):
                 val = h0[i, j].real if np.ndim(h0) > 0 else float(h0.real)
                 if abs(val) > 1e-10:
-                    h_loc0 += val * c_dag_op(bl, i) * c(bl, j)
+                    h_loc0 += val * c_dag(bl, i) * c(bl, j)
 
     # Set up Jperp_tau
     jperp_iw = GfImFreq(indices=[0], beta=beta, statistic="Boson", n_points=n_tau_bosonic // 2)

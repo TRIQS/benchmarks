@@ -6,7 +6,7 @@
 import sys, os, time
 sys.path.append(os.getcwd() + "/..")
 sys.path.append(os.getcwd() + "/../../common")
-from model import block_names, U, mu, beta
+from model import block_names, U, mu, beta, make_g0_and_delta
 try:
     from model import h
 except ImportError:

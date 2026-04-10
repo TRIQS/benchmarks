@@ -9,7 +9,7 @@ from model import beta, gf_struct, n_iw, Delta_iw, G0_iw, h_int
 from save_utils import save_results, parse_measure_args
 
 from triqs.utility import mpi
-from w2dyn_cthyb import Solver, version
+from w2dyn_cthyb import Solver, version, is_gf_real_in_tau
 
 # --------- Parse arguments ----------
 SUPPORTED = []
