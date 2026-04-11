@@ -81,11 +81,13 @@ if 'chi2' in args.measure:
 
     for (bl1, bl1_size), (bl2, bl2_size) in iprod(gf_struct, gf_struct):
         for a, b in iprod(range(bl1_size), range(bl2_size)):
-            # ph: <c†_{bl1,a} c_{bl1,a} c†_{bl2,b} c_{bl2,b}> (density-density)
+            # ph (Eq. 38): chi2ph_{abcd}(τ) = <c†_a(τ+) c_b(τ) c†_c(0+) c_d(0)>
+            # Density-contracted: i=j=(bl1,a), k=l=(bl2,b) → <n_{bl1,a}(τ) n_{bl2,b}(0)>
             g = ed.chi_iw((bl1, a), (bl1, a), (bl2, b), (bl2, b), beta, n_iw, False)
             chi2ph_iw[(bl1, bl2)].data[:, a, b] = g.data[:]
-            # pp: <c†_{bl1,a} c_{bl2,b} c†_{bl1,a} c_{bl2,b}> (pair correlator)
-            g = ed.chi_iw((bl1, a), (bl2, b), (bl1, a), (bl2, b), beta, n_iw, False)
+            # pp (Eq. 37): chi2pp_{abcd}(τ) = <c†_a(τ+) c_b(0+) c†_c(τ) c_d(0)>
+            # Density-contracted: same indices, but PP time structure (pairing correlator)
+            g = ed.chi_iw((bl1, a), (bl1, a), (bl2, b), (bl2, b), beta, n_iw, False, 'PP')
             chi2pp_iw[(bl1, bl2)].data[:, a, b] = g.data[:]
 
     chi2_d, chi2_m = to_physical_channels_ph(chi2ph_iw[('up', 'up')], chi2ph_iw[('up', 'dn')])

@@ -48,7 +48,7 @@ if 'G_w' in args.measure and w_mesh is not None:
     solve_params.update(energy_window=w_window, n_w=n_w, broadening=broadening)
 
 if 'chi2' in args.measure:
-    solve_params.update(chi_spin=True, chi_dens=True)
+    solve_params.update(chi_spin=True, chi_dens=True, chi_pair=True)
 
 start = time.time()
 S.solve(**solve_params)
@@ -86,8 +86,30 @@ if 'G_w' in args.measure and w_mesh is not None:
 
 # chi2 measurement (--measure chi2)
 if 'chi2' in args.measure:
-    obs['chi2_d'] = S.chi_dens_iw
-    obs['chi2_m'] = S.chi_spin_iw
+    from triqs.gf import Gf
+    # EDIpack convention (summed over all spin sectors):
+    #   chi_dens = chi_uu + chi_ud + chi_du + chi_dd     (total density susceptibility)
+    #   chi_spin = (chi_uu - chi_ud - chi_du + chi_dd)/4  (Sz-Sz susceptibility)
+    # Benchmark convention (channels.py, one spin row):
+    #   chi2_d = chi_uu + chi_ud    chi2_m = chi_uu - chi_ud
+    # NOTE: The conversion below assumes SU(2) symmetry (chi_uu=chi_dd, chi_ud=chi_du).
+    # For models with magnetic field (broken SU(2)), these factors are approximate.
+    #   chi_dens = 2*(chi_uu + chi_ud) → chi2_d = chi_dens / 2
+    #   4*chi_spin = 2*(chi_uu - chi_ud) → chi2_m = 2 * chi_spin
+    chi2_d = S.chi_dens_iw.copy()
+    chi2_d *= 0.5
+    chi2_m = S.chi_spin_iw.copy()
+    chi2_m *= 2.0
+    # PP channel (Eq. 37): chi2pp_{abcd}(τ) = <c†_a(τ+) c_b(0+) c†_c(τ) c_d(0)>
+    # EDIpack's chi_pair = chi2pp_ud (density-contracted pairing correlator).
+    # For density-contracted PP: chi2pp_ud = chi2pp_udc (swapping spin labels of
+    # both pairs gives the same correlator), therefore:
+    #   chi2_s = chi2pp_ud - chi2pp_udc = 0
+    #   chi2_t = chi2pp_ud + chi2pp_udc = 2 * chi_pair
+    chi2_s = Gf(mesh=S.chi_pair_iw.mesh, target_shape=S.chi_pair_iw.target_shape)
+    chi2_t = S.chi_pair_iw.copy()
+    chi2_t *= 2.0
+    obs.update(chi2_d=chi2_d, chi2_m=chi2_m, chi2_s=chi2_s, chi2_t=chi2_t)
 
 # --------- Save ----------
 save_results("../results/edipack.h5", "edipack2triqs", "0.11.0", "N/A",
