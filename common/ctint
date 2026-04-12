@@ -87,14 +87,20 @@ obs['static_obs'] = {'density': density}
 
 # chi2 measurement (DLR -> ImFreq conversion)
 if 'chi2' in args.measure:
-    from channels import to_physical_channels_ph, to_physical_channels_pp
-    chi2_d, chi2_m = to_physical_channels_ph(S.chi2ph_iw[('up', 'up')], S.chi2ph_iw[('up', 'dn')])
-    chi2_s, chi2_t = to_physical_channels_pp(S.chi2pp_iw[('up', 'dn')], S.chi2pp_iw[('dn', 'up')])
+    from channels import to_physical_channels_ph
     import util
+    chi2_d, chi2_m = to_physical_channels_ph(S.chi2ph_iw[('up', 'up')], S.chi2ph_iw[('up', 'dn')])
     chi2_d = util.contract_chi2_density(make_gf_imfreq(make_gf_dlr(chi2_d), n_iw))
     chi2_m = util.contract_chi2_density(make_gf_imfreq(make_gf_dlr(chi2_m), n_iw))
-    chi2_s = util.contract_chi2_density(make_gf_imfreq(make_gf_dlr(chi2_s), n_iw))
-    chi2_t = util.contract_chi2_density(make_gf_imfreq(make_gf_dlr(chi2_t), n_iw))
+    # PP: ctint provides AABB block ordering only. For density-contracted chi2,
+    # chi2pp_udc = -chi2pp_ud (anticommutation of annihilation pair), so:
+    #   chi2_s = chi2pp_ud - chi2pp_udc = 2 * chi2pp_ud
+    #   chi2_t = chi2pp_ud + chi2pp_udc = 0
+    chi2pp_ud = util.contract_chi2_density(make_gf_imfreq(make_gf_dlr(S.chi2pp_iw[('up', 'dn')]), n_iw))
+    chi2_s = chi2pp_ud.copy()
+    chi2_s *= 2.0
+    chi2_t = chi2pp_ud.copy()
+    chi2_t *= 0.0
     obs.update(chi2_d=chi2_d, chi2_m=chi2_m, chi2_s=chi2_s, chi2_t=chi2_t)
 
 # chi3 measurement — evaluate DLR2D on (Boson, Fermion) channel mesh
@@ -127,11 +133,16 @@ if 'chi3' in args.measure:
             chi3ph[bl][iW, iw] = chi3ph_dlr2d[bl](ferm_ph)
 
     chi3_d, chi3_m = to_physical_channels_ph(chi3ph[('up', 'up')], chi3ph[('up', 'dn')])
-    chi3_s, chi3_t = to_physical_channels_pp(chi3pp[('up', 'dn')], chi3pp[('dn', 'up')])
+    # PP channels: ctint provides AABB only. For density-contracted chi3,
+    # chi3_udc[a,b,c] = -chi3_ud[a,c,b] (anticommutation + ABBA→AABB index map).
+    import numpy as np
+    chi3_ud = util.contract_chi3_density(chi3pp[('up', 'dn')])
+    chi3_udc = chi3_ud.copy()
+    chi3_udc.data[...] = -np.swapaxes(chi3_ud.data, -1, -2)
+    chi3_s, chi3_t = to_physical_channels_pp(chi3_ud, chi3_udc)
     obs.update(chi3_d=util.contract_chi3_density(chi3_d),
                chi3_m=util.contract_chi3_density(chi3_m),
-               chi3_s=util.contract_chi3_density(chi3_s),
-               chi3_t=util.contract_chi3_density(chi3_t))
+               chi3_s=chi3_s, chi3_t=chi3_t)
 
     # Also store DLR2D compressed representations
     obs['chi3pp_iw_nfft'] = S.chi3pp_iw_nfft

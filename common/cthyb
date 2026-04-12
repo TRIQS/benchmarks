@@ -128,8 +128,14 @@ obs['static_obs'] = {'density': density, 'nn_ab': nn_ab}
 # chi4/G2 measurement
 if 'chi4' in args.measure:
     from channels import to_physical_channels_ph, to_physical_channels_pp
+    import numpy as np
     chi4_d, chi4_m = to_physical_channels_ph(S.G2_iw_ph[('up', 'up')], S.G2_iw_ph[('up', 'dn')])
-    chi4_s, chi4_t = to_physical_channels_pp(S.G2_iw_pp[('up', 'dn')], S.G2_iw_pp[('dn', 'up')])
+    # PP channels: cthyb measures AABB only. The ABBA crossed version is:
+    # chi4_udc[i,j,k,l] = -chi4_ud[i,l,k,j] (anticommutation of annihilation pair)
+    chi4_ud = S.G2_iw_pp[('up', 'dn')]
+    chi4_udc = chi4_ud.copy()
+    chi4_udc.data[...] = -np.swapaxes(chi4_ud.data, -3, -1)
+    chi4_s, chi4_t = to_physical_channels_pp(chi4_ud, chi4_udc)
     obs.update(chi4_d=chi4_d, chi4_m=chi4_m, chi4_s=chi4_s, chi4_t=chi4_t)
 
 # --------- Save ----------

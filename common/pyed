@@ -11,7 +11,7 @@ import util
 from save_utils import save_results, parse_measure_args
 
 from triqs.operators import c, c_dag, n
-from triqs.gf import MeshImTime, MeshProduct
+from triqs.gf import MeshImTime, MeshImFreq, MeshProduct
 from pyed.TriqsExactDiagonalization import TriqsExactDiagonalization
 
 # --------- Parse arguments ----------
@@ -62,10 +62,10 @@ if 'chi3' in args.measure:
     from channels import to_physical_channels_ph, to_physical_channels_pp
 
     n_tau_chi3 = 10 * (2 * n_iw + 1)
-    tau_mesh_b = MeshImTime(beta, 'Boson', n_tau_chi3)
+    # Both tau axes are fermionic (c† and c are fermionic operators).
     tau_mesh_f = MeshImTime(beta, 'Fermion', n_tau_chi3)
 
-    chi3pp_tau = util.Block2Gf_from_struct(mesh=MeshProduct(tau_mesh_b, tau_mesh_f), struct=gf_struct)
+    chi3pp_tau = util.Block2Gf_from_struct(mesh=MeshProduct(tau_mesh_f, tau_mesh_f), struct=gf_struct)
     chi3ph_tau = chi3pp_tau.copy()
 
     for (bl1, bl1_size), (bl2, bl2_size) in product(gf_struct, gf_struct):
@@ -75,16 +75,55 @@ if 'chi3' in args.measure:
         ed.set_g3_tau(chi3ph_tau[(bl1, bl2)][0,0,0,0],
                       c_dag(bl1,0), c(bl1,0), c_dag(bl2,0) * c(bl2,0))
 
-    chi3pp_iw = util.Block2Gf_from_fourier2D(chi3pp_tau, n_iw, gf_struct)
-    chi3ph_iw = util.Block2Gf_from_fourier2D(chi3ph_tau, n_iw, gf_struct)
+    # 2D Fourier transform to fermionic (nu1, nu2) basis
+    chi3pp_nu = util.Block2Gf_from_fourier2D(chi3pp_tau, n_iw, gf_struct)
+    chi3ph_nu = util.Block2Gf_from_fourier2D(chi3ph_tau, n_iw, gf_struct)
+
+    # Convert from fermionic (nu1, nu2) to channel parameterization (Omega, nu):
+    #   PH: chi3_ph(Omega, nu) = chi3(nu1=nu, nu2=Omega+nu)  →  n2 = m + l
+    #   PP: chi3_pp(Omega, nu) = chi3(nu1=nu, nu2=Omega-nu)  →  n2 = m - l - 1
+    # where m = bosonic index, l = fermionic index.
+    import numpy as np
+    iW_mesh = MeshImFreq(beta, 'Boson', n_iw)
+    iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
+    chi3_mesh = MeshProduct(iW_mesh, iw_mesh)
+    nu_mesh = chi3ph_nu[next(iter(chi3ph_nu.indices))].mesh[1]  # fermionic source mesh
+    n_f = len(nu_mesh)
+    f0 = nu_mesh.first_index()  # first fermionic integer index (-n_iw)
+
+    chi3pp_iw = util.Block2Gf_from_struct(mesh=chi3_mesh, struct=gf_struct)
+    chi3ph_iw = util.Block2Gf_from_struct(mesh=chi3_mesh, struct=gf_struct)
+
+    for bl in chi3pp_iw.indices:
+        pp_data = chi3pp_nu[bl].data
+        ph_data = chi3ph_nu[bl].data
+        for idx_m, iW in enumerate(iW_mesh):
+            m = iW.index
+            for idx_l, iw in enumerate(iw_mesh):
+                l = iw.index
+                # PH: chi3_ph(Omega, nu) = chi3_ferm(nu, -(Omega+nu))
+                # The second operator (c) has conjugate FT, so nu2 = -(m+l)-1
+                i2_ph = -(m + l) - 1 - f0
+                if 0 <= i2_ph < n_f:
+                    chi3ph_iw[bl].data[idx_m, idx_l] = ph_data[idx_l, i2_ph]
+                # PP: chi3_pp(Omega, nu) = chi3_ferm(nu, Omega-nu)
+                # Both operators are c†, so nu2 = m-l-1
+                i2_pp = m - l - 1 - f0
+                if 0 <= i2_pp < n_f:
+                    chi3pp_iw[bl].data[idx_m, idx_l] = pp_data[idx_l, i2_pp]
 
     # Contract 4-index to 3-index (density vertex diagonal) and apply spin decomposition
     chi3_d, chi3_m = to_physical_channels_ph(chi3ph_iw[('up', 'up')], chi3ph_iw[('up', 'dn')])
-    chi3_s, chi3_t = to_physical_channels_pp(chi3pp_iw[('up', 'dn')], chi3pp_iw[('dn', 'up')])
+    # PP channels: pyed provides AABB only. For density-contracted chi3,
+    # chi3_udc[a,b,c] = -chi3_ud[a,c,b] (anticommutation + ABBA→AABB index map).
+    import numpy as np
+    chi3_ud = util.contract_chi3_density(chi3pp_iw[('up', 'dn')])
+    chi3_udc = chi3_ud.copy()
+    chi3_udc.data[...] = -np.swapaxes(chi3_ud.data, -1, -2)
+    chi3_s, chi3_t = to_physical_channels_pp(chi3_ud, chi3_udc)
     obs.update(chi3_d=util.contract_chi3_density(chi3_d),
                chi3_m=util.contract_chi3_density(chi3_m),
-               chi3_s=util.contract_chi3_density(chi3_s),
-               chi3_t=util.contract_chi3_density(chi3_t))
+               chi3_s=chi3_s, chi3_t=chi3_t)
 
 # --------- Save ----------
 save_results("../results/pyed.h5", "pyed", "N/A", "N/A", **obs)

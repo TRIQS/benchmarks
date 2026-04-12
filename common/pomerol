@@ -77,7 +77,8 @@ if 'chi2' in args.measure:
     # Build chi2 Block2Gf containers with target_shape=(bl1_size, bl2_size)
     # chi2_ph[(s1,s2)][a,b] = <n_{s1,a}(Omega) n_{s2,b}(-Omega)>
     chi2ph_iw = util.Block2Gf_from_struct(mesh=iW_mesh, struct=gf_struct, n_legs=2)
-    chi2pp_iw = util.Block2Gf_from_struct(mesh=iW_mesh, struct=gf_struct, n_legs=2)
+    chi2pp_ud_iw = Gf(mesh=iW_mesh, target_shape=(dict(gf_struct)['up'], dict(gf_struct)['dn']))
+    chi2pp_udc_iw = Gf(mesh=iW_mesh, target_shape=(dict(gf_struct)['up'], dict(gf_struct)['dn']))
 
     for (bl1, bl1_size), (bl2, bl2_size) in iprod(gf_struct, gf_struct):
         for a, b in iprod(range(bl1_size), range(bl2_size)):
@@ -85,13 +86,19 @@ if 'chi2' in args.measure:
             # Density-contracted: i=j=(bl1,a), k=l=(bl2,b) → <n_{bl1,a}(τ) n_{bl2,b}(0)>
             g = ed.chi_iw((bl1, a), (bl1, a), (bl2, b), (bl2, b), beta, n_iw, False)
             chi2ph_iw[(bl1, bl2)].data[:, a, b] = g.data[:]
-            # pp (Eq. 37): chi2pp_{abcd}(τ) = <c†_a(τ+) c_b(0+) c†_c(τ) c_d(0)>
-            # Density-contracted: same indices, but PP time structure (pairing correlator)
-            g = ed.chi_iw((bl1, a), (bl1, a), (bl2, b), (bl2, b), beta, n_iw, False, 'PP')
-            chi2pp_iw[(bl1, bl2)].data[:, a, b] = g.data[:]
+
+    # PP (Eq. 37): chi2pp_{ijkl}(τ) = <c†_i(τ+) c_j(0+) c†_k(τ) c_l(0)>
+    # AABB density-contracted: chi2pp_ud[a,b] = <c†_{up,a} c_{up,a} c†_{dn,b} c_{dn,b}> (PP)
+    # ABBA density-contracted: chi2pp_udc[a,b] = <c†_{up,a} c_{dn,b} c†_{dn,b} c_{up,a}> (PP)
+    up_size, dn_size = dict(gf_struct)['up'], dict(gf_struct)['dn']
+    for a, b in iprod(range(up_size), range(dn_size)):
+        g = ed.chi_iw(('up', a), ('up', a), ('dn', b), ('dn', b), beta, n_iw, False, 'PP')
+        chi2pp_ud_iw.data[:, a, b] = g.data[:]
+        g = ed.chi_iw(('up', a), ('dn', b), ('dn', b), ('up', a), beta, n_iw, False, 'PP')
+        chi2pp_udc_iw.data[:, a, b] = g.data[:]
 
     chi2_d, chi2_m = to_physical_channels_ph(chi2ph_iw[('up', 'up')], chi2ph_iw[('up', 'dn')])
-    chi2_s, chi2_t = to_physical_channels_pp(chi2pp_iw[('up', 'dn')], chi2pp_iw[('dn', 'up')])
+    chi2_s, chi2_t = to_physical_channels_pp(chi2pp_ud_iw, chi2pp_udc_iw)
     obs.update(chi2_d=chi2_d, chi2_m=chi2_m, chi2_s=chi2_s, chi2_t=chi2_t)
 
 n_iw_2p = n_iw
@@ -107,11 +114,16 @@ if 'chi3' in args.measure:
     chi3_pp = ed.chi3_iw_inu(**chi3_params, channel='PP', block_order='AABB')
 
     chi3_d, chi3_m = to_physical_channels_ph(chi3_ph[('up', 'up')], chi3_ph[('up', 'dn')])
-    chi3_s, chi3_t = to_physical_channels_pp(chi3_pp[('up', 'dn')], chi3_pp[('dn', 'up')])
+    # PP channels: for density-contracted chi3, the ABBA crossed version is
+    # chi3_udc[a,b,c] = -chi3_ud[a,c,b] (anticommutation + ABBA→AABB index map).
+    import numpy as np
+    chi3_ud = util.contract_chi3_density(chi3_pp[('up', 'dn')])
+    chi3_udc = chi3_ud.copy()
+    chi3_udc.data[...] = -np.swapaxes(chi3_ud.data, -1, -2)
+    chi3_s, chi3_t = to_physical_channels_pp(chi3_ud, chi3_udc)
     obs.update(chi3_d=util.contract_chi3_density(chi3_d),
                chi3_m=util.contract_chi3_density(chi3_m),
-               chi3_s=util.contract_chi3_density(chi3_s),
-               chi3_t=util.contract_chi3_density(chi3_t))
+               chi3_s=chi3_s, chi3_t=chi3_t)
 
 # chi4/G2 measurement (--measure chi4)
 if 'chi4' in args.measure:
@@ -124,7 +136,13 @@ if 'chi4' in args.measure:
     G2_pp = ed.G2_iw_inu_inup(**g2_params, channel='PP', block_order='AABB')
 
     chi4_d, chi4_m = to_physical_channels_ph(G2_ph[('up', 'up')], G2_ph[('up', 'dn')])
-    chi4_s, chi4_t = to_physical_channels_pp(G2_pp[('up', 'dn')], G2_pp[('dn', 'up')])
+    # PP channels: ABBA crossed version from anticommutation identity:
+    # chi4_udc[i,j,k,l] = -chi4_ud[i,l,k,j]
+    import numpy as np
+    chi4_ud = G2_pp[('up', 'dn')]
+    chi4_udc = chi4_ud.copy()
+    chi4_udc.data[...] = -np.swapaxes(chi4_ud.data, -3, -1)
+    chi4_s, chi4_t = to_physical_channels_pp(chi4_ud, chi4_udc)
     obs.update(chi4_d=chi4_d, chi4_m=chi4_m, chi4_s=chi4_s, chi4_t=chi4_t)
 
 # --------- Save ----------

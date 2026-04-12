@@ -100,15 +100,15 @@ if 'chi2' in args.measure:
     chi2_d *= 0.5
     chi2_m = S.chi_spin_iw.copy()
     chi2_m *= 2.0
-    # PP channel (Eq. 37): chi2pp_{abcd}(τ) = <c†_a(τ+) c_b(0+) c†_c(τ) c_d(0)>
-    # EDIpack's chi_pair = chi2pp_ud (density-contracted pairing correlator).
-    # For density-contracted PP: chi2pp_ud = chi2pp_udc (swapping spin labels of
-    # both pairs gives the same correlator), therefore:
-    #   chi2_s = chi2pp_ud - chi2pp_udc = 0
-    #   chi2_t = chi2pp_ud + chi2pp_udc = 2 * chi_pair
-    chi2_s = Gf(mesh=S.chi_pair_iw.mesh, target_shape=S.chi_pair_iw.target_shape)
-    chi2_t = S.chi_pair_iw.copy()
-    chi2_t *= 2.0
+    # PP channel (Eq. 37): chi2pp_{ijkl}(τ) = <c†_i(τ+) c_j(0+) c†_k(τ) c_l(0)>
+    # EDIpack's chi_pair = chi2pp_ud (AABB density-contracted pairing correlator).
+    # The crossed version chi2pp_udc (ABBA) = -chi2pp_ud by anticommutation of the
+    # annihilation pair (c_dn c_up = -c_up c_dn), therefore:
+    #   chi2_s = chi2pp_ud - chi2pp_udc = 2 * chi_pair
+    #   chi2_t = chi2pp_ud + chi2pp_udc = 0
+    chi2_s = S.chi_pair_iw.copy()
+    chi2_s *= 2.0
+    chi2_t = Gf(mesh=S.chi_pair_iw.mesh, target_shape=S.chi_pair_iw.target_shape)
     obs.update(chi2_d=chi2_d, chi2_m=chi2_m, chi2_s=chi2_s, chi2_t=chi2_t)
 
 # --------- Save ----------
