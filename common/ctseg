@@ -17,7 +17,7 @@ from triqs.utility import mpi
 from triqs_ctseg import Solver, version
 
 # --------- Parse arguments ----------
-SUPPORTED = ['chi2']
+SUPPORTED = ['chi2', 'chi3']
 args = parse_measure_args(SUPPORTED)
 
 # --------- Auto-detect dynamic interactions from model.py ----------
@@ -110,6 +110,11 @@ if 'chi2' in args.measure:
     solve_params['measure_nn_tau'] = True
     solve_params['measure_Sperp_tau'] = True
 
+if 'chi3' in args.measure:
+    solve_params['measure_chi3'] = True
+    solve_params['dlr_wmax'] = 10.0
+    solve_params['dlr_eps'] = 1e-10
+
 start = time.time()
 S.solve(**solve_params)
 run_time = time.time() - start
@@ -152,6 +157,37 @@ if 'chi2' in args.measure:
                                               nn_iw_blocks[('up', 'dn')])
     obs['chi2_d'] = chi2_d
     obs['chi2_m'] = chi2_m
+
+# chi3 measurement — evaluate DLR2D on (Boson, Fermion) channel mesh
+if 'chi3' in args.measure:
+    from triqs.gf import make_gf_dlr2d, MeshProduct
+    from channels import to_physical_channels_ph
+    import util
+
+    iW_mesh = MeshImFreq(beta, 'Boson', n_iw)
+    iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
+    chi3_mesh = MeshProduct(iW_mesh, iw_mesh)
+
+    # Convert NFFT data to DLR2D coefficient representation (evaluable at arbitrary frequencies)
+    chi3_dlr2d = {bl: make_gf_dlr2d(S.results.chi3[bl]) for bl in S.results.chi3.indices}
+
+    # Create target container on (Boson, Fermion) mesh
+    chi3ph = util.Block2Gf_from_struct(mesh=chi3_mesh, struct=gf_struct)
+
+    # Evaluate DLR2D at fermionic pairs using PH channel translation:
+    #   PH: chi3(Omega, nu) at (nu1, nu2) = (nu, Omega + nu)
+    for iW, iw in chi3_mesh:
+        Omega, nu = iW.value, iw.value
+        ferm_ph = (nu, Omega + nu)
+        for bl in chi3ph.indices:
+            chi3ph[bl][iW, iw] = chi3_dlr2d[bl](ferm_ph)
+
+    chi3_d, chi3_m = to_physical_channels_ph(chi3ph[('up', 'up')], chi3ph[('up', 'dn')])
+    obs.update(chi3_d=util.contract_chi3_density(chi3_d),
+               chi3_m=util.contract_chi3_density(chi3_m))
+
+    # Also store DLR2D compressed representation
+    obs['chi3_dlr2d'] = S.results.chi3
 
 # --------- Save ----------
 save_results("../results/ctseg.h5", "triqs_ctseg", version.version,

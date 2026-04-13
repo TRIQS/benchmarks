@@ -18,21 +18,21 @@ models:
       - {solver: atomdiag, measure: G_w}
       - {solver: edipack, measure: G_w chi2}
       - cthyb
-      - ctint
-      - {solver: ctseg, measure: chi2}
+      - {solver: ctint, measure: chi3}
+      - {solver: ctseg, measure: chi2 chi3}
       - {solver: alps_cthyb, no_mpi: true}
       - w2dyn_cthyb
 
   # SIAM_Discrete_Bath_3Level: model.py not yet created, skipped for now
 
   SIAM_SemiCircular:
-    runs: [cthyb, ctint, {solver: ctseg, measure: chi2}, {solver: alps_cthyb, no_mpi: true}, w2dyn_cthyb, nrg]
+    runs: [cthyb, ctint, {solver: ctseg, measure: chi2 chi3}, {solver: alps_cthyb, no_mpi: true}, w2dyn_cthyb, nrg]
 
   SIAM_DynU:
-    runs: [ctint, {solver: ctseg, measure: chi2}]
+    runs: [ctint, {solver: ctseg, measure: chi2 chi3}]
 
   SIAM_Jperp:
-    runs: [cthyb, ctint, {solver: ctseg, measure: chi2}]
+    runs: [cthyb, ctint, {solver: ctseg, measure: chi2 chi3}]
 
   Dimer:
     runs:
@@ -52,8 +52,8 @@ models:
       - {solver: atomdiag, measure: G_w}
       - {solver: edipack, measure: G_w chi2}
       - cthyb
-      - ctint
-      - {solver: ctseg, measure: chi2}
+      - {solver: ctint, measure: chi3}
+      - {solver: ctseg, measure: chi2 chi3}
       - {solver: alps_cthyb, no_mpi: true}
       - w2dyn_cthyb
 
@@ -83,10 +83,10 @@ models:
       - ctint
 
   Plaquette_SemiCircular:
-    runs: [cthyb, ctint, {solver: ctseg, measure: chi2}, {solver: alps_cthyb, no_mpi: true}]
+    runs: [cthyb, ctint, {solver: ctseg, measure: chi2 chi3}, {solver: alps_cthyb, no_mpi: true}]
 
   La2CuO4:
-    runs: [cthyb, ctint, {solver: ctseg, measure: chi2}, {solver: alps_cthyb, no_mpi: true}, forktps, w2dyn_cthyb]
+    runs: [cthyb, ctint, {solver: ctseg, measure: chi2 chi3}, {solver: alps_cthyb, no_mpi: true}, forktps, w2dyn_cthyb]
     n_mpi_ranks: 16
 
   Sr2RuO4:
