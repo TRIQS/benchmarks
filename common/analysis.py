@@ -68,6 +68,28 @@ def compute_sigma(data, G0_iw):
 # Deviation tables
 # =====================================================================
 
+def compute_deviations(obs_dict, block_lst):
+    """Compute pairwise max-norm deviations for an observable.
+
+    Returns
+    -------
+    dict : {(solver_a, solver_b): float}
+        Upper-triangle pairwise max-norm deviations.
+    """
+    solvers = sorted(obs_dict.keys())
+    devs = {}
+    for i, s1 in enumerate(solvers):
+        for j, s2 in enumerate(solvers):
+            if j <= i:
+                continue
+            dev = 0.0
+            for bl in block_lst:
+                diff = obs_dict[s1][bl].data - obs_dict[s2][bl].data
+                dev = max(dev, np.max(np.abs(diff)))
+            devs[(s1, s2)] = dev
+    return devs
+
+
 def deviation_table(obs_dict, block_lst, label='G'):
     """Print pairwise max-norm deviation table for an observable.
 
