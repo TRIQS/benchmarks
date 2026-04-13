@@ -27,6 +27,16 @@ except ImportError:
 
 n_tau_bosonic = 2001
 
+# --------- Auto-detect complex hybridization/hamiltonian ----------
+from triqs.gf import is_gf_real_in_tau
+hybridisation_is_complex = not is_gf_real_in_tau(G0_iw)
+
+try:
+    from model import h_imp
+    local_hamiltonian_is_complex = any(isinstance(c, complex) and abs(c.imag) > 1e-10 for c, _ in h_imp)
+except ImportError:
+    local_hamiltonian_is_complex = any(isinstance(c, complex) and abs(c.imag) > 1e-10 for c, _ in h_int)
+
 # --------- Construct the CTHYB solver ----------
 constr_params = {
         'beta' : beta,
@@ -37,6 +47,10 @@ constr_params = {
 
 if has_Jperp:
     constr_params['delta_interface'] = True
+if hybridisation_is_complex:
+    constr_params['hybridisation_is_complex'] = True
+if local_hamiltonian_is_complex:
+    constr_params['local_hamiltonian_is_complex'] = True
 
 S = Solver(**constr_params)
 
