@@ -24,16 +24,10 @@ import yaml
 
 def check_triqs_env():
     """Verify that the TRIQS environment is properly set up."""
-    triqs_root = os.environ.get('TRIQS_ROOT')
-    if not triqs_root:
-        print("Warning: TRIQS_ROOT not set. Source triqsvars.sh first:")
-        print("  source ~/opt/triqs/share/triqs/triqsvars.sh")
-        sys.exit(1)
-    triqs_lib = os.path.join(triqs_root, 'lib')
-    ld_path = os.environ.get('LD_LIBRARY_PATH', '')
-    if triqs_lib not in ld_path.split(':'):
-        print(f"Warning: {triqs_lib} not in LD_LIBRARY_PATH. Source triqsvars.sh first:")
-        print(f"  source {triqs_root}/share/triqs/triqsvars.sh")
+    try:
+        import triqs
+    except ImportError:
+        print("Error: Cannot import triqs. Source triqsvars.sh first.")
         sys.exit(1)
 
 
