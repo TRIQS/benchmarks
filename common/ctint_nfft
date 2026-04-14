@@ -25,9 +25,7 @@ S.G0_iw << G0_dlr_iw
 # --------- Solve! ----------
 solve_params = {
         'h_int' : h_int,
-        'n_warmup_cycles' : 10000,
         'n_cycles' : 10000,
-        'length_cycle' : 100,
         'measure_M_iw' : True,
         'measure_M3pp_iw' : True,
         'measure_M3ph_iw' : True
