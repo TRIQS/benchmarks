@@ -92,9 +92,7 @@ else:
 # --------- Solve! ----------
 solve_params = {
         'h_int' : h_int,
-        'n_warmup_cycles' : 10000,
         'n_cycles' : args.n_cycles,
-        'length_cycle' : 100,
         'measure_pert_order' : True,
         'measure_density_matrix' : True,
         'use_norm_as_weight' : True,

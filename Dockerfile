@@ -78,7 +78,17 @@ ENV SRC=/tmp/src BUILD=/tmp/build INSTALL=/usr \
 # -- TRIQS ecosystem (cmake) --------------------------------------------------
 USER root
 RUN set -ex ; \
-  for pkg in triqs cthyb ctseg ctint tprf ; do \
+  for pkg in triqs cthyb ctseg ctint ; do \
+    mkdir $BUILD ; cd $BUILD ; \
+    git clone https://github.com/TRIQS/$pkg --branch DLR2D --depth 1 $SRC ; \
+    cmake $SRC -DCMAKE_INSTALL_PREFIX=$INSTALL ; \
+    make -j$NCORES ; \
+    make install ; \
+    rm -rf $SRC $BUILD ; \
+  done
+
+RUN set -ex ; \
+  for pkg in tprf ; do \
     mkdir $BUILD ; cd $BUILD ; \
     git clone https://github.com/TRIQS/$pkg --branch $BRANCH --depth 1 $SRC ; \
     cmake $SRC -DCMAKE_INSTALL_PREFIX=$INSTALL ; \
