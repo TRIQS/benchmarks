@@ -59,7 +59,7 @@ if has_Jperp:
 solve_params = {
         'h_int' : h_int,
         'n_cycles' : args.n_cycles,
-        'measure_densities' : True,
+        'measure_density' : True,
         }
 
 if 'chi2' in args.measure:
@@ -82,7 +82,7 @@ density = {}
 for bl_idx, (bl, bl_size) in enumerate(gf_struct):
     for i in range(bl_size):
         key = f"{bl}_{i}" if bl_size > 1 else bl
-        density[key] = S.densities[bl_idx][i]
+        density[key] = S.density[bl_idx][i]
 obs['static_obs'] = {'density': density}
 
 # chi2 measurement (DLR -> ImFreq conversion)
