@@ -2,7 +2,6 @@ import argparse
 import inspect
 
 from h5 import HDFArchive
-from triqs.utility import mpi
 
 
 def parse_measure_args(supported):
@@ -62,6 +61,7 @@ def save_results(filepath, solver_name, solver_version, solver_git_hash,
     **observables : dict
         Keys like G, G_w, chi3_d, chi3_m, static_obs, etc.
     """
+    from triqs.utility import mpi
     if not mpi.is_master_node():
         return
 
