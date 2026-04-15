@@ -170,10 +170,30 @@ RUN set -ex ; \
 #   make install ; \
 #   rm -rf $SRC $BUILD
 
+# -- ALPSCore + ALPS/CT-HYB (cmake) --------------------------------------------
+RUN set -ex ; \
+  mkdir $BUILD ; cd $BUILD ; \
+  git clone https://github.com/ALPSCore/ALPSCore --depth 1 $SRC ; \
+  cmake $SRC -DCMAKE_INSTALL_PREFIX=$INSTALL -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DENABLE_MPI=ON -DTesting=OFF ; \
+  make -j$NCORES ; \
+  make install ; \
+  rm -rf $SRC $BUILD
+
+RUN set -ex ; \
+  mkdir $BUILD ; cd $BUILD ; \
+  git clone https://github.com/ALPSCore/CT-HYB --depth 1 $SRC ; \
+  cmake $SRC -DCMAKE_INSTALL_PREFIX=$INSTALL -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DTesting=OFF ; \
+  make -j$NCORES ; \
+  make install ; \
+  rm -rf $SRC $BUILD
+
 # -- DCore + dcorelib (pip) ----------------------------------------------------
 USER ${NB_USER}
 RUN pip install 'sparse_ir<2' cvxpy toml sympy
-RUN pip install --no-deps git+https://github.com/shinaoka/dcorelib.git
+RUN pip install --no-deps git+https://github.com/shinaoka/dcorelib.git && \
+    python -c "import dcorelib, pathlib; \
+      f = pathlib.Path(dcorelib.__file__); \
+      f.write_text(f.read_text() + '\nfrom importlib.metadata import version as _v\n__version__ = _v(\"dcorelib\")\n')"
 RUN pip install --no-deps git+https://github.com/issp-center-dev/DCore.git@develop
 
 # -- Runtime setup -------------------------------------------------------------
