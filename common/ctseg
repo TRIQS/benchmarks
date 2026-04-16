@@ -158,34 +158,37 @@ if 'chi2' in args.measure:
 
 # chi3 measurement — evaluate DLR2D on (Boson, Fermion) channel mesh
 if 'chi3' in args.measure:
-    from triqs.gf import make_gf_dlr2d, MeshProduct
-    from channels import to_physical_channels_ph
-    import util
+    if S.results.chi3 is None:
+        print("WARNING: chi3 measurement was requested but solver returned None -- skipping chi3 post-processing")
+    else:
+        from triqs.gf import make_gf_dlr2d, MeshProduct
+        from channels import to_physical_channels_ph
+        import util
 
-    iW_mesh = MeshImFreq(beta, 'Boson', n_iw)
-    iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
-    chi3_mesh = MeshProduct(iW_mesh, iw_mesh)
+        iW_mesh = MeshImFreq(beta, 'Boson', n_iw)
+        iw_mesh = MeshImFreq(beta, 'Fermion', n_iw)
+        chi3_mesh = MeshProduct(iW_mesh, iw_mesh)
 
-    # Convert NFFT data to DLR2D coefficient representation (evaluable at arbitrary frequencies)
-    chi3_dlr2d = {bl: make_gf_dlr2d(S.results.chi3[bl]) for bl in S.results.chi3.indices}
+        # Convert NFFT data to DLR2D coefficient representation (evaluable at arbitrary frequencies)
+        chi3_dlr2d = {bl: make_gf_dlr2d(S.results.chi3[bl]) for bl in S.results.chi3.indices}
 
-    # Create target container on (Boson, Fermion) mesh
-    chi3ph = util.Block2Gf_from_struct(mesh=chi3_mesh, struct=gf_struct)
+        # Create target container on (Boson, Fermion) mesh
+        chi3ph = util.Block2Gf_from_struct(mesh=chi3_mesh, struct=gf_struct)
 
-    # Evaluate DLR2D at fermionic pairs using PH channel translation:
-    #   PH: chi3(Omega, nu) at (nu1, nu2) = (nu, Omega + nu)
-    for iW, iw in chi3_mesh:
-        Omega, nu = iW.value, iw.value
-        ferm_ph = (nu, Omega + nu)
-        for bl in chi3ph.indices:
-            chi3ph[bl][iW, iw] = chi3_dlr2d[bl](ferm_ph)
+        # Evaluate DLR2D at fermionic pairs using PH channel translation:
+        #   PH: chi3(Omega, nu) at (nu1, nu2) = (nu, Omega + nu)
+        for iW, iw in chi3_mesh:
+            Omega, nu = iW.value, iw.value
+            ferm_ph = (nu, Omega + nu)
+            for bl in chi3ph.indices:
+                chi3ph[bl][iW, iw] = chi3_dlr2d[bl](ferm_ph)
 
-    chi3_d, chi3_m = to_physical_channels_ph(chi3ph[('up', 'up')], chi3ph[('up', 'dn')])
-    obs.update(chi3_d=util.contract_chi3_density(chi3_d),
-               chi3_m=util.contract_chi3_density(chi3_m))
+        chi3_d, chi3_m = to_physical_channels_ph(chi3ph[('up', 'up')], chi3ph[('up', 'dn')])
+        obs.update(chi3_d=util.contract_chi3_density(chi3_d),
+                   chi3_m=util.contract_chi3_density(chi3_m))
 
-    # Also store DLR2D compressed representation
-    obs['chi3_dlr2d'] = S.results.chi3
+        # Also store DLR2D compressed representation
+        obs['chi3_dlr2d'] = S.results.chi3
 
 # --------- Save ----------
 save_results("../results/ctseg.h5", "triqs_ctseg", version.version,
