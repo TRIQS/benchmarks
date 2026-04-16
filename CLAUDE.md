@@ -141,3 +141,6 @@ models:
 - **Chi3 DLR2D in ctint**: ctint stores chi3 in compressed DLR2D NFFT form; must convert via `make_gf_imfreq(make_gf_dlr2d(...))` for analysis.
 - **Real-frequency solvers**: atomdiag/edipack/nrg/forktps only compute G_w if `model.py` defines `w_mesh`, `broadening`, and `w_window`.
 - **Channel inter-translations**: `channels.py` pp/ph/xph translations raise `NotImplementedError`; only spin decomposition (d/m/s/t) is implemented.
+- **DLR2D branch**: triqs/cthyb/ctseg/ctint now build from `DLR2D` branch. cthyb/ctseg auto-determine `n_warmup_cycles` and `length_cycle` -- do not set them manually.
+- **Docker usage**: Build with `docker build -t solver_benchmarks .`. Run with `docker run -u 0:0 -v $(pwd):/home/triqs/benchmarks solver_benchmarks <cmd>`. The `-u 0:0` is needed due to Docker user namespace remapping causing UID mismatch with bind mounts.
+- **DCore MPI conflict**: `save_utils.py` defers `from triqs.utility import mpi` into function body to avoid polluting `sys.modules` before DCore's `raise_if_mpi_imported()` check.
