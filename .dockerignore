@@ -1,0 +1,8 @@
+**/results/
+**/*.h5
+**/__pycache__/
+**/.ipynb_checkpoints/
+node_modules/
+benchmark_results.json
+slurm_*.sh
+.git/
