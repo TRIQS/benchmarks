@@ -212,9 +212,9 @@ def plot_w_comparison(obs_dict, name, block_lst, component=(0, 0), spectral=Fals
             g = obs_dict[solver][block][i_orb, j_orb]
             w = np.array([float(x) for x in g.mesh])
             if spectral:
-                y = -1.0 / np.pi * g.data[:, 0, 0].imag
+                y = -1.0 / np.pi * g.data.imag
             else:
-                y = g.data[:, 0, 0].real
+                y = g.data.real
             ax.plot(w, y, MARKERS[k % len(MARKERS)], label=solver, markersize=3)
         ax.set_xlabel(r"$\omega$")
         ax.set_ylabel(ylabel)
@@ -271,13 +271,24 @@ def plot_chi_contour(chi_dict, channel, omega_idx=0):
         ax = axes[0, k]
         chi = chi_dict[solver]
         if hasattr(chi, 'data'):
-            # Assume 3-index object chi(Omega, nu, nu') -- take Omega slice
-            data_2d = chi.data[omega_idx, :, :].real
+            # data layout: (freq1, freq2, ..., orb1, orb2, ...)
+            # Number of frequency dims = number of mesh components
+            n_freq = len(chi.mesh.components) if hasattr(chi.mesh, 'components') else 1
+            sliced = chi.data[omega_idx]
+            # Select first orbital component for all trailing dims
+            for _ in range(sliced.ndim - (n_freq - 1)):
+                sliced = sliced[..., 0]
+            data = sliced.real
         else:
-            data_2d = np.array(chi)
-        im = ax.imshow(data_2d, origin='lower', aspect='auto', cmap='RdBu_r')
+            data = np.array(chi)
+
         ax.set_title(f"chi_{channel} - {solver}")
-        plt.colorbar(im, ax=ax)
+        if data.ndim >= 2:
+            im = ax.imshow(data, origin='lower', aspect='auto', cmap='RdBu_r')
+            plt.colorbar(im, ax=ax)
+        else:
+            ax.plot(data)
+            ax.set_xlabel(r"$\nu_n$")
 
     plt.tight_layout()
     return fig
