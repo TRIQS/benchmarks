@@ -71,6 +71,39 @@ Impurity Solvers
 | [ForkTPS](https://github.com/TRIQS/forktps) | `forktps` | Fork TPS (real-frequency) |
 | triqs.atom_diag | `atomdiag` | Atomic ED |
 
+Docker
+------
+
+A Dockerfile is provided that builds all supported solvers from source. This
+gives a reproducible environment without needing to install TRIQS and the
+solvers locally.
+
+Build the image (takes ~30 min with 10 cores):
+```bash
+docker build -t solver_benchmarks .
+docker build -t solver_benchmarks --build-arg NCORES=16 .   # more cores
+```
+
+Run benchmarks by bind-mounting the repository into the container:
+```bash
+docker run --rm -u 0:0 -v $(pwd):/home/triqs/benchmarks solver_benchmarks \
+    python run_benchmarks.py                                # all benchmarks
+docker run --rm -u 0:0 -v $(pwd):/home/triqs/benchmarks solver_benchmarks \
+    python run_benchmarks.py Hubbard_Atom exact             # single solver
+docker run --rm -u 0:0 -v $(pwd):/home/triqs/benchmarks solver_benchmarks \
+    python run_benchmarks.py --dry-run                      # preview only
+```
+
+Results are written to `MODEL/results/` on the host via the bind mount.
+
+> **Note:** `-u 0:0` is required because Docker user namespace remapping can
+> cause a UID mismatch between the container user and the bind-mounted files.
+
+For an interactive shell inside the container:
+```bash
+docker run --rm -it -u 0:0 -v $(pwd):/home/triqs/benchmarks solver_benchmarks
+```
+
 Adding Your Solver
 ------------------
 
