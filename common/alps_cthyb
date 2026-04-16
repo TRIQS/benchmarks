@@ -33,6 +33,13 @@ solve_params = {
 S = Solver(beta, gf_struct_dcore, u_mat, n_iw)
 S.set_G0_iw(G0_iw_dcore)
 
+# DCore's launch_mpi_subprocesses() calls raise_if_mpi_imported() again.
+# On DLR2D, TRIQS model imports may have loaded triqs.utility.mpi as a
+# side effect. Scrub it so DCore's check passes.
+for _mod in list(sys.modules):
+    if 'triqs.utility.mpi' in _mod or _mod == 'mpi4py':
+        del sys.modules[_mod]
+
 mpirun_command = "mpirun -np 4"
 start = time.time()
 S.solve(None, mpirun_command, solve_params)

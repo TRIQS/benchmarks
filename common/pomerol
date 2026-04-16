@@ -13,6 +13,7 @@ except ImportError:
 import util
 from save_utils import save_results, parse_measure_args
 
+from triqs.utility import mpi
 from pomerol2triqs import PomerolED
 
 # --------- Parse arguments ----------

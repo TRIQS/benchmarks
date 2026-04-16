@@ -78,10 +78,26 @@ ENV SRC=/tmp/src BUILD=/tmp/build INSTALL=/usr \
 # -- TRIQS ecosystem (cmake) --------------------------------------------------
 USER root
 RUN set -ex ; \
-  for pkg in triqs cthyb ctseg ctint ; do \
+  mkdir $BUILD ; cd $BUILD ; \
+  git clone https://github.com/TRIQS/triqs --branch DLR2D --depth 1 $SRC ; \
+  cmake $SRC -DCMAKE_INSTALL_PREFIX=$INSTALL -DTRIQS_WITH_NFFT=ON ; \
+  make -j$NCORES ; \
+  make install ; \
+  rm -rf $SRC $BUILD
+
+RUN set -ex ; \
+  mkdir $BUILD ; cd $BUILD ; \
+  git clone https://github.com/TRIQS/cthyb --branch DLR2D --depth 1 $SRC ; \
+  cmake $SRC -DCMAKE_INSTALL_PREFIX=$INSTALL -DHybridisation_is_complex=ON -DLocal_hamiltonian_is_complex=ON ; \
+  make -j$NCORES ; \
+  make install ; \
+  rm -rf $SRC $BUILD
+
+RUN set -ex ; \
+  for pkg in ctseg ctint ; do \
     mkdir $BUILD ; cd $BUILD ; \
     git clone https://github.com/TRIQS/$pkg --branch DLR2D --depth 1 $SRC ; \
-    cmake $SRC -DCMAKE_INSTALL_PREFIX=$INSTALL ; \
+    cmake $SRC -DCMAKE_INSTALL_PREFIX=$INSTALL -DGTAU_IS_COMPLEX=ON -DINTERACTION_IS_COMPLEX=ON ; \
     make -j$NCORES ; \
     make install ; \
     rm -rf $SRC $BUILD ; \
