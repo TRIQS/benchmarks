@@ -111,15 +111,35 @@ docker build -t solver_benchmarks .
 docker build -t solver_benchmarks --build-arg NCORES=16 .   # more cores
 ```
 
-Run benchmarks by bind-mounting the repository into the container:
+Run short tasks (individual solvers, a single model, dry runs, or report
+generation) in foreground with `--rm`:
 ```bash
-docker run --rm -u 0:0 -v $(pwd):/home/triqs/benchmarks solver_benchmarks \
-    python run_benchmarks.py                                # all benchmarks
 docker run --rm -u 0:0 -v $(pwd):/home/triqs/benchmarks solver_benchmarks \
     python run_benchmarks.py Hubbard_Atom exact             # single solver
 docker run --rm -u 0:0 -v $(pwd):/home/triqs/benchmarks solver_benchmarks \
     python run_benchmarks.py --dry-run                      # preview only
+docker run --rm -u 0:0 -v $(pwd):/home/triqs/benchmarks solver_benchmarks \
+    python common/build_report.py                           # rebuild reports
 ```
+
+Run the **full benchmark suite** in detached mode — a full pass takes several
+hours and must survive the terminal/SSH session closing. `python -u` keeps
+stdout unbuffered so `docker logs` shows live progress:
+```bash
+docker run -d --name solver_bench_run -u 0:0 -v $(pwd):/home/triqs/benchmarks \
+    solver_benchmarks \
+    bash -c "python -u run_benchmarks.py 2>&1 && \
+             python -u common/build_report.py 2>&1 && \
+             python -u common/build_summary.py 2>&1"
+
+docker logs -f solver_bench_run          # follow progress
+docker ps --filter name=solver_bench_run # confirm still running
+docker rm solver_bench_run               # clean up after it exits
+```
+
+Per-solver logs are also written directly to `MODEL/results/SOLVER.log` on the
+host via the bind mount, so progress is visible even if `docker logs` is
+unavailable.
 
 Results are written to `MODEL/results/` on the host via the bind mount.
 
