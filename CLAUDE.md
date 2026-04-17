@@ -31,10 +31,9 @@ Common scripts in `common/` are symlinked into each model's `scripts/` directory
 
 ### Model Directories
 Each model contains:
-- `model.py` - Defines physical parameters: `beta`, `h_int`, `G0_iw`, `gf_struct`, `n_iw`, and optionally hamiltonians (`h_0`, `h_imp`, `h_bath`, `h_coup`, `h_tot`), hybridization (`Delta_iw`), DLR mesh quantities (`G0_dlr_iw`, `Delta_dlr`, `dlr_iw_mesh`), real-frequency mesh (`w_mesh`, `broadening`), and dynamic interactions (`D0_func`, `Jperp_func`). Multi-orbital models also export `c_dag_vec`/`c_vec` operator vectors and `block_names`.
+- `model.py` - Defines physical parameters: `beta`, `h_int`, `G0_iw`, `gf_struct`, `n_iw`, and optionally hamiltonians (`h_0`, `h_imp`, `h_bath`, `h_coup`, `h_tot`), hybridization (`Delta_iw`), DLR mesh quantities (`G0_dlr_iw`, `Delta_dlr`, `dlr_iw_mesh`), real-frequency mesh (`w_mesh`, `broadening`), and dynamic interactions (`D0_func`, `Jperp_func`). Multi-orbital models also export `c_dag_vec`/`c_vec` operator vectors and `block_names`. The module-level docstring holds the markdown/LaTeX model description used as the report header.
 - `scripts/` - Solver-specific scripts (symlinks to `common/` or custom)
-- `results/` - HDF5 archives with solver output (ignored on dev branches via .gitignore)
-- `notebook.ipynb` + `notebook.py` - Analysis and comparison (jupytext paired)
+- `results/` - HDF5 archives with solver output plus the generated `report.md`, `figures/`, and `tables/` artifacts (ignored on dev branches via .gitignore)
 
 Models: Hubbard_Atom, SIAM_Discrete_Bath, SIAM_SemiCircular, SIAM_DynU, SIAM_Jperp, Dimer, Dimer_nn, Dimer_SOC, Trimer, Sr2RuO4, Sr2RuO4_SOC, La2CuO4, Plaquette, Plaquette_SemiCircular
 
@@ -65,10 +64,11 @@ Results are stored in `results/SOLVER.h5` with standardized keys:
 ### Common Utilities
 - `common/save_utils.py` - `save_results()` standardized HDF5 output, `parse_measure_args()` for --measure CLI
 - `common/channels.py` - Channel translations (pp/ph/xph) and spin decomposition (d/m/s/t)
-- `common/analysis.py` - Shared analysis/plotting library: `load_all_results()`, `compute_sigma()`, `deviation_table()`, `plot_iw_comparison()`, `plot_w_comparison()`, `plot_static_obs_table()`, `plot_chi_contour()`
+- `common/analysis.py` - Shared analysis/plotting library: `load_all_results()`, `compute_sigma()`, `deviation_table()`, `deviation_vs_reference()`, `plot_iw_comparison()`, `plot_iw_scalar_comparison()`, `plot_w_comparison()`, `plot_static_obs_table()`, `plot_chi_contour()`. The `return_markdown=True` flag on table helpers yields a markdown string instead of printing.
+- `common/build_report.py` - Per-model report generator. Produces `MODEL/results/report.md`, `figures/*.png`, `tables/*.md`.
+- `common/build_summary.py` - Cross-model summary generator. Produces `summary/correctness.md`, `summary/coverage.md`, `summary/README.md`.
 - `common/util.py` - `get_fundamental_operators(op)`: extracts annihilation operators from many-body operator expressions
 - `common/util_mpi.py` - `mpi_print`: prints only on MPI master node
-- `common/plot.py` - Legacy plotting helpers (kept for backward compatibility)
 - `common/script_template` - Template for adding new solvers
 
 ### Common Solver Scripts
@@ -97,21 +97,27 @@ Models with dynamic interactions export descriptors in model.py:
 - `SIAM_Jperp`: `Jperp_func` (spin-spin) -- auto-detected by cthyb/ctint/ctseg
 
 ### Run Automation
-- `benchmark_config.yaml` - Defines which solvers run on which models, with optional `--measure` args
+- `benchmark_config.yaml` - Defines which solvers run on which models, with optional `--measure` args and a `reference_solver` per model for cross-model correctness comparisons
 - `run_benchmarks.py` - Reads config and runs all benchmarks, captures logs to `MODEL/results/SOLVER.log`, produces `benchmark_results.json`. Runs each solver from `MODEL/scripts/` with a 1-hour timeout.
 
 Config format:
 ```yaml
 defaults:
   n_mpi_ranks: 4
+  reference_solver_priority: [exact, pyed, pomerol, edipack, atomdiag]  # fallback if per-model reference_solver is absent
 models:
   ModelName:
+    reference_solver: pyed                        # used by build_summary.py for deviations
     runs:
       - solver_name                              # string form (no measure args)
       - {solver: solver_name, measure: all}      # dict with measure (string or list)
       - {solver: solver_name, measure: [chi2, chi3]}
     n_mpi_ranks: 16  # optional per-model override
 ```
+
+### Report Generation
+- `python common/build_report.py [MODEL ...]` - Build `MODEL/results/report.md` with embedded plots and markdown deviation tables. Imports each model's `model.py` with cwd set to `MODEL/` (to satisfy model.py's `sys.path.append(os.getcwd() + '/../common')`). Requires `G0_iw` on the module for Sigma derivation.
+- `python common/build_summary.py` - Build the cross-model `summary/` directory. Uses `reference_solver` from the config for max-norm deviation columns. Models without a reference appear with an `_all_` placeholder row.
 
 ## Adding a New Solver
 
@@ -123,11 +129,11 @@ models:
 
 ## Adding a New Model
 
-1. Create a new directory with `model.py` defining `beta`, `h_int`, `G0_iw`, `gf_struct`, `n_iw`
+1. Create a new directory with `model.py` defining `beta`, `h_int`, `G0_iw`, `gf_struct`, `n_iw`. Add a module docstring at the top with a markdown/LaTeX description — it will be the header of the generated report.
 2. Create `scripts/` and `results/` subdirectories
 3. Symlink common solver scripts: `ln -s ../../common/ctint scripts/ctint`
-4. Create `notebook.py` from template, convert with `jupytext --to ipynb notebook.py`
-5. Add to `benchmark_config.yaml`
+4. Add to `benchmark_config.yaml` (with a `reference_solver` if you have an ED option available)
+5. After running the benchmarks, regenerate artifacts: `python common/build_report.py NewModel` and `python common/build_summary.py`
 
 ## Conventions and Gotchas
 

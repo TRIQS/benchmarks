@@ -6,10 +6,9 @@ using the Python interface of the [TRIQS library](https://triqs.github.io/triqs)
 
 Each directory defines one specific impurity model and contains:
 
-* **model.py** -- Hamiltonian, hybridization function, and Green function structure.
+* **model.py** -- Hamiltonian, hybridization function, and Green function structure. The module docstring carries a markdown/LaTeX description of the model used as the header of the generated report.
 * **scripts/** -- One script per applicable impurity solver (symlinks to `common/`).
-* **results/** -- HDF5 archives with solver output.
-* **notebook.ipynb** -- Jupyter notebook with model description and comparison of results.
+* **results/** -- HDF5 archives with solver output plus a generated `report.md` containing per-observable plots and deviation tables.
 
 Running Benchmarks
 ------------------
@@ -33,6 +32,34 @@ python run_benchmarks.py --slurm                  # generate SLURM job scripts
 ```
 
 The runner reads `benchmark_config.yaml` for the list of models, solvers, and measurement flags.
+
+Analysis & Reports
+------------------
+
+Comparison plots and deviation tables are produced as static markdown + PNG
+artifacts under each model's `results/` directory. No Jupyter kernel required
+-- GitHub renders the LaTeX and images inline.
+
+Per-model reports (one markdown file per model, with plots and deviation tables
+for every observable):
+```bash
+python common/build_report.py                     # all models with results
+python common/build_report.py Hubbard_Atom Dimer  # selected models
+```
+
+This writes `MODEL/results/report.md`, `MODEL/results/figures/*.png`, and
+`MODEL/results/tables/*.md` for each model.
+
+Cross-model summary (correctness and coverage matrices across all models and
+solvers):
+```bash
+python common/build_summary.py
+```
+
+This writes `summary/correctness.md`, `summary/coverage.md`, and
+`summary/README.md`. The reference solver per model is read from the
+`reference_solver` key in `benchmark_config.yaml`; if absent, the runner falls
+back to the `reference_solver_priority` list in the `defaults:` section.
 
 Models
 ------
@@ -112,5 +139,6 @@ Adding Your Solver
 3. Use `save_results()` from `common/save_utils.py` for standardized HDF5 output.
 4. Symlink into applicable model directories: `ln -s ../../common/your_solver scripts/your_solver`
 5. Add entries to `benchmark_config.yaml`.
+6. Regenerate reports so your solver appears in the comparison: `python common/build_report.py` (and `python common/build_summary.py` for the cross-model overview).
 
 For questions, [open an issue](https://github.com/TRIQS/benchmarks/issues) or contact [Nils Wentzell](mailto:nils.wentzell@gmail.com).

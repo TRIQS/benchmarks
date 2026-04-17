@@ -5,7 +5,7 @@
 # 2. Adjust the solver initialization, solve call, and result extraction
 # 3. Run from the MODEL/scripts directory:  python your_solver
 # 4. Check results in MODEL/results/your_solver.h5
-# 5. Open and run the MODEL/notebook.ipynb file in Jupyter
+# 5. Regenerate the comparison report: python common/build_report.py MODEL
 
 import sys, os, time
 sys.path.append(os.getcwd() + "/..")
