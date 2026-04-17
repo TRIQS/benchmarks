@@ -1,3 +1,15 @@
+r"""# Hubbard Atom
+
+A single atomic level with on-site Coulomb repulsion $U$, chemical potential $\mu$,
+and local magnetic (Zeeman) field $h$. No bath — the impurity is isolated, so the
+Green function of the atom can be written down analytically.
+
+$$
+H = -\mu\,(n_\uparrow + n_\downarrow)
+    - h\,(n_\uparrow - n_\downarrow)
+    + U\, n_\uparrow n_\downarrow
+$$
+"""
 import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *

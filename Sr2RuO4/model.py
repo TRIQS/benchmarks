@@ -1,3 +1,19 @@
+r"""# Sr$_2$RuO$_4$ — Three-band Kanamori DMFT
+
+Three-orbital effective model for the $t_{2g}$ shell of the layered perovskite
+Sr$_2$RuO$_4$, obtained from a Wannier90 Hamiltonian. Kanamori interaction
+$(U, J)$ on the three $t_{2g}$ orbitals; hybridization follows from the
+lattice Green function summed over the Brillouin zone:
+
+$$
+H_{\mathrm{loc}} = \sum_{\alpha\beta\sigma}
+    (h_0^{\alpha\beta} - \mu\delta_{\alpha\beta})
+     c^\dagger_{\alpha\sigma} c_{\beta\sigma}
+  + H_{\mathrm{int}}^{\mathrm{Kanamori}}(U, U'=U-2J, J).
+$$
+
+Spin–orbit coupling is added in the companion model `Sr2RuO4_SOC`.
+"""
 import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *

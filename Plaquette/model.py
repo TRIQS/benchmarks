@@ -1,3 +1,18 @@
+r"""# Plaquette — Isolated 2×2 Hubbard cluster
+
+Four-site $2 \times 2$ cluster with periodic boundary conditions, on-site
+Hubbard interaction, and **no bath**:
+
+$$
+H = -t \sum_{\langle ij\rangle,\sigma}
+        (c^\dagger_{i\sigma} c_{j\sigma} + \mathrm{H.c.})
+    - \mu \sum_{i\sigma} n_{i\sigma}
+    + U \sum_i n_{i\uparrow} n_{i\downarrow},
+$$
+
+at half-filling ($\mu = U/2$). Useful as a finite-size cluster benchmark for
+cluster DMFT-style solvers.
+"""
 import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *

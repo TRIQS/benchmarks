@@ -1,3 +1,17 @@
+r"""# SIAM — Wide Band (Semicircular)
+
+Single-orbital impurity Anderson model with a wide-band (continuous) bath. The
+hybridization function is fixed by imposing a semicircular local density of states
+$\rho(\omega) = \tfrac{2}{\pi D^2}\sqrt{D^2 - \omega^2}$ of half-bandwidth $D=1$:
+
+$$
+\Delta(i\omega_n) = i\omega_n + \mu - G^{-1}_0(i\omega_n),
+\qquad G_0(i\omega_n) = \big[i\omega_n + \mu - \Sigma_{\mathrm{SC}}(i\omega_n)\big]^{-1},
+$$
+
+and the local interaction is
+$H_{\mathrm{int}} = -\mu(n_\uparrow + n_\downarrow) - h(n_\uparrow - n_\downarrow) + U n_\uparrow n_\downarrow$.
+"""
 import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *

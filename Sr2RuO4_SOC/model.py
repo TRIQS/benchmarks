@@ -1,3 +1,13 @@
+r"""# Sr$_2$RuO$_4$ — Three-band Kanamori DMFT with SOC
+
+Same three-orbital $t_{2g}$ effective model as `Sr2RuO4`, but with an on-site
+spin–orbit coupling term added to $h_0$. Spin and orbital indices are no longer
+independent, so the model uses a single combined block covering all six
+spin–orbitals.
+
+The interaction is still Kanamori $(U, J)$ acting in the original orbital
+basis; SOC rotates the one-body part only.
+"""
 import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *

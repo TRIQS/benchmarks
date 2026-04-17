@@ -1,3 +1,12 @@
+r"""# Trimer — Kanamori + discrete bath
+
+Three-orbital (three-site) impurity with inter-site hopping $t$, a Kanamori
+interaction $(U, U', J)$, and a three-level discrete bath — a direct
+generalisation of `Dimer`. The non-interacting part couples the three sites
+via the hopping matrix, and each site hybridises with its own bath level.
+
+See `Dimer` for the Kanamori form of $H_{\mathrm{int}}$.
+"""
 import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *

@@ -1,3 +1,22 @@
+r"""# Dimer with Spin–Orbit Coupling
+
+Two-site dimer with an on-site spin–orbit coupling term $a$ mixing spin and
+orbital indices. Because spin is no longer a good quantum number, all four
+spin–orbital flavours $(\uparrow_0, \uparrow_1, \downarrow_0, \downarrow_1)$
+are placed in a single block labelled `'bl'`.
+
+The single-particle Hamiltonian couples the two sites via the hopping $t$ and
+the SOC $a$:
+
+$$
+h_0 = \mathrm{diag}(\epsilon_i - \mu)
+   - \begin{pmatrix} 0 & t+a & 0 & a \\\ t-a & 0 & -a & 0 \\\
+                     0 & a & 0 & t+a \\\ -a & 0 & t-a & 0 \end{pmatrix},
+$$
+
+and the interaction is restricted to density–density terms
+$U\, n_{i\uparrow} n_{i\downarrow}$ plus $U'\, n_{i\sigma} n_{j\sigma}$.
+"""
 import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *

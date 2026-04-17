@@ -1,3 +1,21 @@
+r"""# SIAM — Dynamic U
+
+Single-orbital Anderson impurity with a retarded density–density interaction
+$D_0(i\omega)$. The instantaneous part of the interaction is the usual on-site
+Hubbard term; the bosonic mode coupling adds a frequency-dependent shift to the
+density–density interaction between opposite spins:
+
+$$
+D_0(i\omega) = D^2 \left(\frac{1}{\omega - \omega_0} - \frac{1}{\omega + \omega_0}\right),
+\qquad
+H_{\mathrm{int}} = U\, n_\uparrow n_\downarrow
+  + \sum_{\sigma\sigma'} \int\!d\tau\,d\tau'\, D_0(\tau-\tau')\,
+    n_\sigma(\tau) n_{\bar\sigma}(\tau').
+$$
+
+The bath is a flat semicircular continuum; see `SIAM_SemiCircular` for the static
+counterpart.
+"""
 import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *

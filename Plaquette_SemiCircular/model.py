@@ -1,3 +1,11 @@
+r"""# Plaquette — Wide-band bath
+
+Same 2×2 Hubbard plaquette geometry as `Plaquette` (hopping $t$, on-site $U$),
+but coupled to a semicircular (wide-band) bath. The hybridization function is
+obtained self-consistently from a semicircular DOS with unit half-bandwidth on
+each cluster site, and the interaction is restricted to the on-site Hubbard
+term $U\, n_{i\uparrow} n_{i\downarrow}$.
+"""
 import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *

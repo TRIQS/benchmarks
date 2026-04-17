@@ -1,3 +1,27 @@
+r"""# Dimer — Kanamori interaction + discrete bath
+
+Two-orbital (two-site) impurity with inter-site hopping $t$, a Kanamori
+interaction $(U, U', J)$, and a two-level discrete bath:
+
+$$
+H_{\mathrm{imp}} = \sum_{ij\sigma} (\epsilon_{ij} - \mu\delta_{ij})
+                    c^\dagger_{i\sigma} c_{j\sigma}
+  + H_{\mathrm{int}}^{\mathrm{Kanamori}}(U, U', J),
+$$
+
+$$
+H_{\mathrm{int}}^{\mathrm{Kanamori}} =
+  U \sum_i n_{i\uparrow} n_{i\downarrow}
+  + U' \sum_{i\neq j} n_{i\uparrow} n_{j\downarrow}
+  + (U' - J) \sum_{i<j,\sigma} n_{i\sigma} n_{j\sigma}
+  - J \sum_{i\neq j} c^\dagger_{i\uparrow} c_{i\downarrow}
+      c^\dagger_{j\downarrow} c_{j\uparrow}
+  + J \sum_{i\neq j} c^\dagger_{i\uparrow} c^\dagger_{i\downarrow}
+      c_{j\downarrow} c_{j\uparrow}.
+$$
+
+Full Hamiltonian (impurity, bath and hybridization) is in `h_tot`.
+"""
 import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *

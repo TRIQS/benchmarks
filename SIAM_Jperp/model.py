@@ -1,3 +1,19 @@
+r"""# SIAM — Dynamic $J_\perp$
+
+Single-orbital Anderson impurity with a retarded transverse spin–spin coupling
+$J_\perp(i\omega)$ (a dynamic Kondo-like interaction):
+
+$$
+J_\perp(i\omega) = \tfrac{1}{2} J^2 \left(\frac{1}{\omega - \omega_0} - \frac{1}{\omega + \omega_0}\right),
+\qquad
+H_{\mathrm{int}}(\tau,\tau') = U\, n_\uparrow(\tau) n_\downarrow(\tau)
+  + \tfrac{1}{2}\! \int\!d\tau\,d\tau'\, J_\perp(\tau-\tau')\,
+  \big(S^+(\tau) S^-(\tau') + \mathrm{H.c.}\big).
+$$
+
+The bath is a flat semicircular continuum. Unlike the $D_0$ case in
+`SIAM_DynU`, this retarded coupling acts in the spin-flip channel.
+"""
 import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *

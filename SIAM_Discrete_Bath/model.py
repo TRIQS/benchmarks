@@ -1,3 +1,18 @@
+r"""# SIAM — Discrete Bath
+
+Single-orbital impurity Anderson model coupled to a small number of discrete
+bath levels with hybridizations $V_k$ and energies $\epsilon_k$:
+
+$$
+H = \sum_\sigma (\epsilon_0 - \mu) n_\sigma
+    + U\, n_\uparrow n_\downarrow
+    + \sum_{k\sigma} \epsilon_k f^\dagger_{k\sigma} f_{k\sigma}
+    + \sum_{k\sigma} V_k (c^\dagger_\sigma f_{k\sigma} + \mathrm{H.c.})
+$$
+
+giving a hybridization function
+$\Delta_\sigma(i\omega_n) = \sum_k |V_k|^2 / (i\omega_n - \epsilon_k)$.
+"""
 import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *

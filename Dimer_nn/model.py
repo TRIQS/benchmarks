@@ -1,3 +1,19 @@
+r"""# Dimer — Density–Density Interaction
+
+Same two-orbital impurity geometry as `Dimer` (inter-site hopping $t$ and a
+two-level discrete bath), but with the interaction reduced to the
+density–density terms only (no pair-hopping, no spin-flip):
+
+$$
+H_{\mathrm{int}}^{nn} =
+  U \sum_i n_{i\uparrow} n_{i\downarrow}
+  + U' \sum_{i\neq j} n_{i\uparrow} n_{j\downarrow}
+  + (U' - J) \sum_{i<j,\sigma} n_{i\sigma} n_{j\sigma}.
+$$
+
+Density–density restriction is useful for `ctseg`, which requires the
+interaction to commute with $n_\sigma(\tau)$.
+"""
 import sys, os
 sys.path.append(os.getcwd() + '/../common')
 from util import *
