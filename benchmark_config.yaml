@@ -1,8 +1,12 @@
 defaults:
   n_mpi_ranks: 4
+  # Used by common/build_summary.py when a model does not specify
+  # `reference_solver` explicitly. First match wins.
+  reference_solver_priority: [exact, pyed, pomerol, edipack, atomdiag]
 
 models:
   Hubbard_Atom:
+    reference_solver: exact
     runs:
       - {solver: exact, measure: all}
       - {solver: pyed, measure: chi3}
@@ -12,6 +16,7 @@ models:
       - {solver: ctint, measure: chi2 chi3}
 
   SIAM_Discrete_Bath:
+    reference_solver: pyed
     runs:
       - pyed
       - {solver: pomerol, measure: chi2 chi3}
@@ -35,6 +40,7 @@ models:
     runs: [cthyb, ctint, {solver: ctseg, measure: chi2 chi3}]
 
   Dimer:
+    reference_solver: pyed
     runs:
       - pyed
       - {solver: pomerol, measure: chi2 chi3}
@@ -46,6 +52,7 @@ models:
       - w2dyn_cthyb
 
   Dimer_nn:
+    reference_solver: pyed
     runs:
       - pyed
       - {solver: pomerol, measure: chi2 chi3}
@@ -58,6 +65,7 @@ models:
       - w2dyn_cthyb
 
   Dimer_SOC:
+    reference_solver: pyed
     runs:
       - pyed
       - pomerol
@@ -67,6 +75,7 @@ models:
       - {solver: alps_cthyb, no_mpi: true}
 
   Trimer:
+    reference_solver: pomerol
     runs:
       - pomerol
       - {solver: atomdiag, measure: G_w}
@@ -77,6 +86,7 @@ models:
       - w2dyn_cthyb
 
   Plaquette:
+    reference_solver: edipack
     runs:
       - {solver: atomdiag, measure: G_w}
       - {solver: edipack, measure: G_w chi2}

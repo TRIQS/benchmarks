@@ -1,8 +1,9 @@
-"""Shared analysis and plotting library for solver benchmark notebooks.
+"""Shared analysis and plotting library for the static report generator.
 
-Extends the functionality of the original plot.py with support for
-multi-observable comparison, static observables, real-frequency data,
-and two-particle correlators.
+Loads per-solver HDF5 results, derives quantities like the self-energy,
+computes max-norm deviations (against a reference or pairwise), and
+produces either matplotlib figures or markdown table strings for the
+`common/build_report.py` / `common/build_summary.py` pipeline.
 """
 
 import numpy as np
@@ -68,7 +69,21 @@ def compute_sigma(data, G0_iw):
 # Deviation tables
 # =====================================================================
 
-def compute_deviations(obs_dict, block_lst):
+def _max_abs_diff(a, b, block_lst=None):
+    """Max-norm |a - b| for BlockGf (iterate blocks) or single Gf (direct .data).
+
+    block_lst restricts BlockGf iteration; for Gf it is ignored.
+    """
+    if isinstance(a, BlockGf):
+        blocks = block_lst if block_lst is not None else [bl for bl, _ in a]
+        dev = 0.0
+        for bl in blocks:
+            dev = max(dev, float(np.max(np.abs(a[bl].data - b[bl].data))))
+        return dev
+    return float(np.max(np.abs(a.data - b.data)))
+
+
+def compute_deviations(obs_dict, block_lst=None):
     """Compute pairwise max-norm deviations for an observable.
 
     Returns
@@ -79,44 +94,56 @@ def compute_deviations(obs_dict, block_lst):
     solvers = sorted(obs_dict.keys())
     devs = {}
     for i, s1 in enumerate(solvers):
-        for j, s2 in enumerate(solvers):
-            if j <= i:
-                continue
-            dev = 0.0
-            for bl in block_lst:
-                diff = obs_dict[s1][bl].data - obs_dict[s2][bl].data
-                dev = max(dev, np.max(np.abs(diff)))
-            devs[(s1, s2)] = dev
+        for s2 in solvers[i + 1:]:
+            devs[(s1, s2)] = _max_abs_diff(obs_dict[s1], obs_dict[s2], block_lst)
     return devs
 
 
-def deviation_table(obs_dict, block_lst, label='G'):
-    """Print pairwise max-norm deviation table for an observable.
+def deviation_vs_reference(obs_dict, ref_solver, block_lst=None):
+    """Max-norm deviation of each solver vs a chosen reference.
+
+    Returns
+    -------
+    dict : {solver_name: float}
+        Empty if `ref_solver` is not in `obs_dict`.
+    """
+    if ref_solver not in obs_dict:
+        return {}
+    ref = obs_dict[ref_solver]
+    return {
+        solver: _max_abs_diff(val, ref, block_lst)
+        for solver, val in obs_dict.items()
+        if solver != ref_solver
+    }
+
+
+def deviation_table(obs_dict, block_lst=None, label='G', return_markdown=False):
+    """Pairwise max-norm deviation table. Prints by default, or returns markdown.
 
     Parameters
     ----------
     obs_dict : dict
         {solver_name: BlockGf or Gf}
-    block_lst : list of str
-        Block names to compare.
+    block_lst : list of str, optional
+        Block names to compare. Required for BlockGf; ignored for single Gf.
     label : str
         Label for the table header.
+    return_markdown : bool
+        If True, return a markdown upper-triangle deviation matrix as a string
+        (diagonal marked '—', below-diagonal left blank).
     """
     solvers = sorted(obs_dict.keys())
     n = len(solvers)
     if n < 2:
-        print(f"  Need at least 2 solvers for deviation table (have {n})")
+        msg = f"Need at least 2 solvers for deviation table (have {n})"
+        if return_markdown:
+            return f"_{msg}._\n"
+        print(f"  {msg}")
         return
 
-    # Compute max deviation across all blocks
-    def max_dev(a, b):
-        dev = 0.0
-        for bl in block_lst:
-            diff = a[bl].data - b[bl].data
-            dev = max(dev, np.max(np.abs(diff)))
-        return dev
+    if return_markdown:
+        return _deviation_table_markdown(obs_dict, solvers, block_lst, label)
 
-    # Header
     width = max(len(s) for s in solvers) + 2
     header = " " * width + "".join(s.rjust(width) for s in solvers)
     print(f"\n  {label} max-norm deviations:")
@@ -127,9 +154,29 @@ def deviation_table(obs_dict, block_lst, label='G'):
             if j <= i:
                 row += " " * width
             else:
-                d = max_dev(obs_dict[s1], obs_dict[s2])
+                d = _max_abs_diff(obs_dict[s1], obs_dict[s2], block_lst)
                 row += f"{d:{width}.2e}"
         print(f"  {row}")
+
+
+def _deviation_table_markdown(obs_dict, solvers, block_lst, label):
+    """Upper-triangle deviation matrix rendered as GitHub-flavored markdown."""
+    lines = [f"### {label} max-norm deviations", ""]
+    lines.append("| | " + " | ".join(solvers) + " |")
+    lines.append("|---|" + "---|" * len(solvers))
+    for i, s1 in enumerate(solvers):
+        cells = []
+        for j, s2 in enumerate(solvers):
+            if j < i:
+                cells.append("")
+            elif j == i:
+                cells.append("—")
+            else:
+                d = _max_abs_diff(obs_dict[s1], obs_dict[s2], block_lst)
+                cells.append(f"{d:.2e}")
+        lines.append(f"| **{s1}** | " + " | ".join(cells) + " |")
+    lines.append("")
+    return "\n".join(lines)
 
 
 # =====================================================================
@@ -181,6 +228,25 @@ def plot_iw_comparison(obs_dict, name, block_lst, n_iw_plot=None, component=(0, 
     return fig
 
 
+def plot_iw_scalar_comparison(obs_dict, name):
+    """Plot a scalar Matsubara quantity (single Gf, no block structure) across solvers.
+
+    Used for chi2_{d,m,s,t} which are single Gf objects on a bosonic mesh.
+    """
+    from triqs.plot.mpl_interface import oplot, plt
+
+    solvers = sorted(obs_dict.keys())
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.set_title(name)
+    for k, solver in enumerate(solvers):
+        oplot(obs_dict[solver], MARKERS[k % len(MARKERS)], name=solver, axes=ax)
+    ax.set_xlabel(r"$\omega_n$")
+    ax.set_ylabel(name)
+    ax.legend(fontsize='small')
+    plt.tight_layout()
+    return fig
+
+
 def plot_w_comparison(obs_dict, name, block_lst, component=(0, 0), spectral=False):
     """Plot real-frequency observable comparison across solvers.
 
@@ -224,8 +290,8 @@ def plot_w_comparison(obs_dict, name, block_lst, component=(0, 0), spectral=Fals
     return fig
 
 
-def plot_static_obs_table(data, obs_name='density'):
-    """Print static observable comparison table across solvers.
+def plot_static_obs_table(data, obs_name='density', return_markdown=False):
+    """Static-observable comparison across solvers. Prints by default, or returns markdown.
 
     Parameters
     ----------
@@ -233,11 +299,20 @@ def plot_static_obs_table(data, obs_name='density'):
         Output of load_all_results().
     obs_name : str
         Name of static observable ('density' or 'nn_ab').
+    return_markdown : bool
+        If True, return a markdown table string (solvers as rows, sub-keys as columns).
     """
-    solvers = sorted(s for s, d in data.items() if 'static_obs' in d and obs_name in d['static_obs'])
+    solvers = sorted(s for s, d in data.items()
+                     if 'static_obs' in d and obs_name in d['static_obs'])
     if not solvers:
-        print(f"  No solver has static_obs/{obs_name}")
+        msg = f"No solver has static_obs/{obs_name}"
+        if return_markdown:
+            return f"_{msg}._\n"
+        print(f"  {msg}")
         return
+
+    if return_markdown:
+        return _static_obs_markdown(data, solvers, obs_name)
 
     print(f"\n  {obs_name}:")
     for solver in solvers:
@@ -247,6 +322,41 @@ def plot_static_obs_table(data, obs_name='density'):
             print(f"    {solver:20s}  {items}")
         else:
             print(f"    {solver:20s}  {val}")
+
+
+def _static_obs_markdown(data, solvers, obs_name):
+    """Render a static observable as a markdown table.
+
+    Handles both scalar and dict-valued observables (e.g. density per orbital,
+    nn_ab per orbital pair). Column order is taken from the first solver that
+    has sub-keys; missing cells are left blank.
+    """
+    subkeys = None
+    for solver in solvers:
+        val = data[solver]['static_obs'][obs_name]
+        if hasattr(val, 'items'):
+            subkeys = list(val.keys())
+            break
+
+    lines = [f"### {obs_name}", ""]
+    if subkeys is None:
+        lines.append("| solver | value |")
+        lines.append("|---|---|")
+        for solver in solvers:
+            lines.append(f"| {solver} | {data[solver]['static_obs'][obs_name]} |")
+    else:
+        header_keys = [str(k) for k in subkeys]
+        lines.append("| solver | " + " | ".join(header_keys) + " |")
+        lines.append("|---|" + "---|" * len(subkeys))
+        for solver in solvers:
+            val = data[solver]['static_obs'][obs_name]
+            cells = []
+            for k in subkeys:
+                v = val.get(k) if hasattr(val, 'get') else None
+                cells.append(f"{v:.6f}" if isinstance(v, (int, float, np.floating)) else "")
+            lines.append(f"| {solver} | " + " | ".join(cells) + " |")
+    lines.append("")
+    return "\n".join(lines)
 
 
 def plot_chi_contour(chi_dict, channel, omega_idx=0):
