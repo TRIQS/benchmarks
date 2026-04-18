@@ -7,8 +7,8 @@ from triqs.operators import c, c_dag, n
 from numpy import array, matrix
 
 # ==== System Parameters ====
-beta = 160.0                    # Inverse temperature
-U = 1.0                         # Hubbard interaction
+beta = 80.0                     # Inverse temperature
+U = 2.0                         # Hubbard interaction
 t = 1.0                         # Hopping
 mu = U / 2                      # Chemical potential (half-filling)
 
